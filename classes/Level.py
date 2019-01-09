@@ -11,7 +11,7 @@ from copy import copy
 
 
 class Level():
-    def __init__(self, screen, sound, dashboard):
+    def __init__(self, screen, sound, dashboard, levelname):
         self.sprites = Sprites()
         self.dashboard = dashboard
         self.sound = sound
@@ -19,8 +19,7 @@ class Level():
         self.level = None
         self.levelLength = 0
         self.entityList = []
-        self.loadLevel("Level1-1.json")
-        print('hoera')
+        self.loadLevel(levelname)
 
     def loadLevel(self, levelname):
         with open("./levels/{}".format(levelname)) as jsonData:

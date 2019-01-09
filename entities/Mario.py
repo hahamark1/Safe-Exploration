@@ -111,7 +111,7 @@ class Mario(EntityBase):
         else:
             ent.timer = 0
             ent.alive = "sleeping"
-        self.dashboard.points += 100
+        self.dashboard.points += -1000
 
     def gameOver(self):
         srf = pygame.Surface((640, 480))
@@ -120,17 +120,17 @@ class Mario(EntityBase):
         self.sound.music_channel.stop()
         self.sound.music_channel.play(self.sound.death)
 
-        for i in range(500, 20, -2):
-            srf.fill((0, 0, 0))
-            pygame.draw.circle(
-                srf, (255, 255, 255), (int(
-                    self.camera.x + self.rect.x) + 2, self.rect.y + 2), i)
-            self.screen.blit(srf, (0, 0))
-            pygame.display.update()
-            self.input.checkForInput()
-        while(self.sound.music_channel.get_busy()):
-            pygame.display.update()
-            self.input.checkForInput()
+        # for i in range(500, 20, -2):
+        #     srf.fill((0, 0, 0))
+        #     pygame.draw.circle(
+        #         srf, (255, 255, 255), (int(
+        #             self.camera.x + self.rect.x) + 2, self.rect.y + 2), i)
+        #     self.screen.blit(srf, (0, 0))
+        #     pygame.display.update()
+        #     self.input.checkForInput()
+        # while(self.sound.music_channel.get_busy()):
+        #     pygame.display.update()
+        #     self.input.checkForInput()
         self.restart = True
 
     def getPos(self):
