@@ -21,29 +21,25 @@ class MarioGym(gym.Env):
     def __init__(self):
         self.levelname = 'Level-basic-with-goombas.json'
         self.init_game()
-        self.action_space = spaces.Discrete(6)
-        self.observation_space = spaces.Box(low=-10000000, high=100000000, dtype=np.float, shape=(1,6))
 
+        self.action_space = spaces.Discrete(6)
+        self.observation_space = spaces.Box(low=-10000000, high=100000000, dtype=np.float, shape=(40,80,4))
         self.reset()
 
     def reset(self):
         self.init_game()
-        self.observation = self.level_to_supersimple_numpy()
-        # while self.observation.shape != (4):
-        #     reward = self.do_game_step('jump')
-        #     self.observation = self.level_to_supersimple_numpy()
+        self.observation = self.level_to_numpy()
         return self.observation
 
     def step(self, action_num):
         action = MOVES[action_num]
         reward = self.do_game_step(action)
-        self.observation = self.level_to_full_numpy()
-        self.observation = self.level_to_supersimple_numpy()
-        # while self.observation.shape != (4):
-        #     reward = self.do_game_step(action)
-        #     self.observation = self.level_to_super_simple_numpy()
+        self.observation = self.level_to_numpy()
+        if self.observation.shape != (40, 80):
+            self.observation = np.zeros((40, 80))
+
         info = {'info': 'jeej'}
-        restart = len([x for x in self.level.entityList if (x.__class__.__name__ == 'Goomba' and x.alive)]) != 13 or self.mario.restart
+        restart = len([x for x in self.level.entityList if (x.__class__.__name__ == 'Goomba' and x.alive)]) != 11 or self.mario.restart
         #restart = False
         return self.observation, reward, restart, info
 
@@ -77,28 +73,27 @@ class MarioGym(gym.Env):
         return reward
 
     def level_to_numpy(self):
-        array = np.zeros((150, 150))
+        array = np.zeros((600, 600))
         padding = 40
-        array[int(round(self.mario.rect.y/32))][int(round(self.mario.rect.x/32))] = -1
+        array[int(round(self.mario.rect.y/8)) -1][int(round(self.mario.rect.x/8)) -1] = -1
         #for i, row in enumerate(self.level.level):
         #    for j, ele in enumerate(row):
         #        if ele.rect:
         #            array[i][j] = 1
         for entity in self.level.entityList:
             if entity.__class__.__name__ == 'Coin':
-                array[int(round(entity.rect.y / 32))][int(round(entity.rect.x / 32))] = 2
+                array[int(round(entity.rect.y / 8))][int(round(entity.rect.x / 8))] = 2
             if entity.__class__.__name__ == 'Koopa' or entity.__class__.__name__ == 'Goomba':
-                if entity.getPosIndex().y < 600:
-                    array[int(round(entity.rect.y / 32))][int(round(entity.rect.x / 32))] = 3
+                    array[int(round(entity.rect.y / 8)) -1][int(round(entity.rect.x / 8)) -1] = 1
             if entity.__class__.__name__ == 'RandomBox':
                 if not entity.triggered:
-                    array[int(round(entity.rect.y / 32))][int(round(entity.rect.x / 32))] = 4
+                    array[int(round(entity.rect.y / 8))][int(round(entity.rect.x / 8))] = 4
                 else:
-                    array[int(round(entity.rect.y / 32))][int(round(entity.rect.x / 32))] = 5
-        array = np.hstack((np.zeros((150, padding-5)), array))
-        array = np.hstack((np.ones((150, 5)), array))
-        return array[int(round(self.mario.rect.y / 32)) - padding:int(round(self.mario.rect.y / 32)) + padding + 1,
-               int(round(self.mario.rect.x / 32)):int(round(self.mario.rect.x / 32)) + 2 * padding]
+                    array[int(round(entity.rect.y / 8))][int(round(entity.rect.x / 8))] = 5
+        array = np.hstack((np.zeros((600, padding-5)), array))
+        array = np.hstack((np.ones((600, 5)), array))
+        return array[12:52,
+               int(round(self.mario.rect.x / 8)):int(round(self.mario.rect.x / 8)) + 2 * padding]
 
     def level_to_full_numpy(self):
         array = np.zeros((700, 700))
