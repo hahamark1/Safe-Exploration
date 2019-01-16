@@ -33,13 +33,14 @@ class Collider():
 
     def checkY(self):
         try:
-            rows = [self.level[self.entity.getPosIndex().y],
-                    self.level[self.entity.getPosIndex().y + 1]]
+            rows = [self.levelObj.level[self.entity.getPosIndex().y],
+                    self.levelObj.level[self.entity.getPosIndex().y + 1]]
         except Exception:
             try:
                 self.entity.gameOver()
             except Exception:
-                self.entity.alive = None
+                #self.entity.alive = None
+                pass
             return
         for row in rows:
             tiles = row[self.entity.getPosIndex(

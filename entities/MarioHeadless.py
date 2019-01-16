@@ -6,6 +6,7 @@ import numpy as np
 import random
 from traits import go, jump
 from traits.go import goTrait
+from traits.goHeadless import goTraitHeadless
 from traits.jump import jumpTrait
 from classes.Animation import Animation
 from classes.Collider import Collider
@@ -17,41 +18,27 @@ from classes.Sound import Sound
 from classes.Input import Input
 
 
-class Mario(EntityBase):
-    def __init__(self, x, y, level, screen, dashboard, sound, gravity=1.25):
-        super(Mario, self).__init__(x, y, gravity)
-        self.spriteCollection = Sprites().spriteCollection
-        self.camera = Camera(self.rect, self)
-        self.sound = sound
+class MarioHeadless(EntityBase):
+    def __init__(self, x, y, level, gravity=1.25):
+        super(MarioHeadless, self).__init__(x, y, gravity)
         self.input = Input(self)
-
-        self.animation = Animation([self.spriteCollection["mario_run1"].image,
-                                    self.spriteCollection["mario_run2"].image,
-                                    self.spriteCollection["mario_run3"].image
-                                    ],
-                                   self.spriteCollection["mario_idle"].image,
-                                   self.spriteCollection["mario_jump"].image)
 
         self.traits = {
             "jumpTrait": jumpTrait(self),
-            "goTrait": goTrait(self.animation, screen, self.camera, self),
+            "goTrait": goTraitHeadless(self),
             "bounceTrait": bounceTrait(self)
         }
 
         self.levelObj = level
         self.collision = Collider(self, level)
-        self.screen = screen
         self.EntityCollider = EntityCollider(self)
-        self.dashboard = dashboard
         self.restart = False
 
     def update(self):
         self.updateTraits()
         self.moveMario()
-        self.camera.move()
         self.applyGravity()
         self.checkEntityCollision()
-        self.input.checkForInput()
 
     def moveMario(self):
         self.rect.y += self.vel.y
@@ -72,23 +59,18 @@ class Mario(EntityBase):
 
     def _onCollisionWithItem(self, item):
         self.levelObj.entityList.remove(item)
-        self.dashboard.points += 100
-        self.dashboard.coins += 1
-        self.sound.play_sfx(self.sound.coin)
+        self.levelObj.points += 100
+        self.levelObj.coins += 1
 
     def _onCollisionWithBlock(self, block):
-        if (not block.triggered):
-            self.sound.play_sfx(self.sound.bump)
         block.triggered = True
 
     def _onCollisionWithMob(self, mob, collisionState):
         if collisionState.isTop and (mob.alive is True or mob.alive == "shellBouncing"):
-            self.sound.play_sfx(self.sound.stomp)
             self.rect.bottom = mob.rect.top
             self.bounce()
             self.killEntity(mob)
         elif collisionState.isTop and mob.alive == "sleeping":
-            self.sound.play_sfx(self.sound.stomp)
             self.rect.bottom = mob.rect.top
             mob.timer = 0
             self.bounce()
@@ -111,30 +93,13 @@ class Mario(EntityBase):
         else:
             ent.timer = 0
             ent.alive = "sleeping"
-        self.dashboard.points += -1000
+        self.levelObj.points += -1000
 
     def gameOver(self):
-        srf = pygame.Surface((640, 480))
-        srf.set_colorkey((255, 255, 255), pygame.RLEACCEL)
-        srf.set_alpha(128)
-        self.sound.music_channel.stop()
-        self.sound.music_channel.play(self.sound.death)
-
-        # for i in range(500, 20, -2):
-        #     srf.fill((0, 0, 0))
-        #     pygame.draw.circle(
-        #         srf, (255, 255, 255), (int(
-        #             self.camera.x + self.rect.x) + 2, self.rect.y + 2), i)
-        #     self.screen.blit(srf, (0, 0))
-        #     pygame.display.update()
-        #     self.input.checkForInput()
-        # while(self.sound.music_channel.get_busy()):
-        #     pygame.display.update()
-        #     self.input.checkForInput()
         self.restart = True
 
     def getPos(self):
-        return (self.camera.x + self.rect.x, self.rect.y)
+        return (self.rect.x, self.rect.y)
 
     def doRandomMove(self):
         moves = ['moveLeft', 'moveRight', 'jump', 'doNothing']

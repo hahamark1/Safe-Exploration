@@ -39,6 +39,8 @@ class Q_Learner():
                 counter += 1
                 if counter > 5000:
                     self.mario.restart = True
+                if len([x for x in self.level.entityList if (x.__class__.__name__ == 'Goomba' and x.alive)]) == 0:
+                    self.mario.restart = True
 
             self.goombas_killed[-1] = initial_goombas - len(
                 [x for x in self.level.entityList if (x.__class__.__name__ == 'Goomba' and x.alive)])
@@ -132,8 +134,10 @@ class Q_Learner():
                     array[int(round(entity.rect.y / 8))][int(round(entity.rect.x / 8))] = 4
                 else:
                     array[int(round(entity.rect.y / 8))][int(round(entity.rect.x / 8))] = 5
-        array = np.hstack((np.zeros((600, padding)), array))
-        return array[int(round(self.mario.rect.y/8))-padding:int(round(self.mario.rect.y/8))+padding+1, int(round(self.mario.rect.x/8)):int(round(self.mario.rect.x/8))+2*padding]
+        array = np.hstack((np.zeros((600, padding-5)), array))
+        array = np.hstack((np.ones((600, 5)), array))
+        return array[int(round(self.mario.rect.y / 8)) - padding:int(round(self.mario.rect.y / 8)) + padding + 1,
+               int(round(self.mario.rect.x / 8)):int(round(self.mario.rect.x / 8)) + 2 * padding]
 
     def do_move(self, move):
         if move == 'moveLeft':
@@ -152,7 +156,6 @@ class Q_Learner():
             self.mario.traits['goTrait'].direction = 0
 
     def level_to_key(self):
-        a = self.level_to_numpy()
         level_list = self.level_to_numpy().tolist()
         #print(level_list)
         #level_list.append((int(self.mario.vel.x), np.sign(self.mario.vel.y/10)))
@@ -171,7 +174,7 @@ class Q_Learner():
         np.random.shuffle(MOVES)
         for action in MOVES:
             if action not in self.Q_values[level_key]:
-                self.Q_values[level_key][action] = 0.1
+                self.Q_values[level_key][action] = 0
             if self.Q_values[level_key][action] >= max_Q:
                 max_Q = self.Q_values[level_key][action]
                 best_action = action
@@ -191,8 +194,7 @@ class Q_Learner():
         value = reward + self.future_discount * new_Q
         self.Q_values[state][action] = (1-self.learning_rate)*self.Q_values[state][action] + self.learning_rate*value
         #print(self.Q_values[state][action])\
-        if value < 0.0:
-            print(value)
+        print(value)
 
 
 

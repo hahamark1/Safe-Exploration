@@ -174,5 +174,3 @@ class Level():
         self.entityList.append(
             Koopa(self.screen, self.sprites.spriteCollection, x, y, self)
         )
-
-
