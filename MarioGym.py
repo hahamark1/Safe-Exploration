@@ -110,7 +110,8 @@ class MarioGym(gym.Env):
             if self.mario.restart:
                 deadbonus = -1000
 
-            reward = 0.001 * (self.score - start_score + deadbonus)
+            #reward = 0.001 * (self.score - start_score + deadbonus)
+            reward = 1
 
         return reward
 
@@ -123,11 +124,12 @@ class MarioGym(gym.Env):
         #        if ele.rect:
         #            array[i][j] = 1
         for entity in self.level.entityList:
-            if entity.__class__.__name__ == 'Coin':
-                array[int(round(entity.rect.y / 8))][int(round(entity.rect.x / 8))] = 2
             if entity.__class__.__name__ == 'Koopa' or entity.__class__.__name__ == 'Goomba' or entity.__class__.__name__ == 'GoombaHeadless':
                     array[int(round(entity.rect.y / 8)) -1][int(round(entity.rect.x / 8)) -1] = 1
-            if entity.__class__.__name__ == 'RandomBox':
+            elif entity.__class__.__name__ == 'Coin':
+                array[int(round(entity.rect.y / 8))][int(round(entity.rect.x / 8))] = 2
+
+            elif entity.__class__.__name__ == 'RandomBox':
                 if not entity.triggered:
                     array[int(round(entity.rect.y / 8))][int(round(entity.rect.x / 8))] = 4
                 else:

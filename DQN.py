@@ -19,11 +19,11 @@ env.seed()
 nb_actions = env.action_space.n
 tb_log_dir = 'logs/tmp/{}'.format(time.time())
 tb_callback = TensorBoard(log_dir=tb_log_dir, batch_size=32, write_grads=True, write_images=True)
-cp = ModelCheckpoint('logs/cp/checkpoint-{episode_reward:.2f}-{epoch:02d}-.h5f', monitor='episode_reward', verbose=0, save_best_only=False, save_weights_only=True, mode='max', period=100)
+cp = ModelCheckpoint('logs/cp/checkpoint-{episode_reward:.2f}-{epoch:02d}-.h5f', monitor='episode_reward', verbose=0, save_best_only=False, save_weights_only=True, mode='max', period=500)
 INPUT_SHAPE = (40, 80)
 
 # HYPERPARAMETERS
-TRAINING_STEPS = 5000000
+TRAINING_STEPS = 2000
 WINDOW_LENGTH = 4
 REPLAY_MEMORY = 500000
 MAX_EPSILON = 0.99
@@ -106,7 +106,7 @@ dqn.fit(env,
         nb_steps=TRAINING_STEPS,
         visualize=True,
         verbose=2,
-        callbacks=[tb_callback, cp],
+        callbacks=[cp],
         action_repetition=ACTION_REPETITION)
 
 # After training is done, we save the final weights.
