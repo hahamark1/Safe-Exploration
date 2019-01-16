@@ -34,7 +34,7 @@ DUELING = True
 WARMUP_STEPS = 200000
 TARGET_MODEL_UPDATE = 10000
 DELTA_CLIP = 1.0
-ACTION_REPETITION = 5
+ACTION_REPETITION = 1
 
 class AtariProcessor(Processor):
     def process_observation(self, observation):

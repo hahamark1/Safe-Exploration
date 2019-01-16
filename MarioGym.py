@@ -89,7 +89,7 @@ class MarioGym(gym.Env):
         mario_position = (int(self.mario.rect.y / 8), int(self.mario.rect.x / 8))
         counter = 0
 
-        while mario_position == (int(self.mario.rect.y / 8), int(self.mario.rect.x / 8)) and counter < 1:
+        while counter < 5:
             counter += 1
             self.do_move(move)
             if not self.headless:
