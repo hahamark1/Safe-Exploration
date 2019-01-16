@@ -111,7 +111,7 @@ class MarioGym(gym.Env):
                 deadbonus = -1000
 
             #reward = 0.001 * (self.score - start_score + deadbonus)
-            reward = 1
+            reward = 0.001
 
         return reward
 
