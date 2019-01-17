@@ -66,7 +66,7 @@ class MarioGym(gym.Env):
             self.menu = Menu(self.screen, self.dashboard, self.level, self.sound)
             self.menu.update()
 
-            self.mario = Mario(75, 0, self.level, self.screen, self.dashboard, self.sound)
+            self.mario = Mario(0, 0, self.level, self.screen, self.dashboard, self.sound)
             self.clock = pygame.time.Clock()
 
             self.menu.dashboard.state = "play"
@@ -97,13 +97,11 @@ class MarioGym(gym.Env):
                 self.level.drawLevel(self.mario.camera)
                 self.mario.update()
                 self.clock.tick(self.max_frame_rate)
-
-                pygame.display.update()
                 self.dashboard.update()
                 pygame.display.update()
             else:
-                self.mario.update()
                 self.level.updateEntities()
+                self.mario.update()
                 self.clock += (1.0 / 60.0)
                 self.score = self.level.points
 

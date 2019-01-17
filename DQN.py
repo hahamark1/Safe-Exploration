@@ -13,9 +13,9 @@ from MarioGym import MarioGym
 
 
 # Get the environment and extract the number of actions.
-env = MarioGym(headless=True)
-np.random.seed()
-env.seed()
+env = MarioGym(headless=False)
+np.random.seed(123)
+env.seed(123)
 nb_actions = env.action_space.n
 tb_log_dir = 'logs/tmp/{}'.format(time.time())
 tb_callback = TensorBoard(log_dir=tb_log_dir, batch_size=32, write_grads=True, write_images=True)
@@ -23,11 +23,11 @@ cp = ModelCheckpoint('logs/cp/checkpoint-{episode_reward:.2f}-{epoch:02d}-.h5f',
 INPUT_SHAPE = (40, 80)
 
 # HYPERPARAMETERS
-TRAINING_STEPS = 2000
+TRAINING_STEPS = 5000000
 WINDOW_LENGTH = 4
 REPLAY_MEMORY = 500000
-MAX_EPSILON = 0.99
-MIN_EPSILON = 0.01
+MAX_EPSILON = 0.15
+MIN_EPSILON = 0.0
 EPSILON_DECAY_PERIOD = 0.75
 LEARNING_RATE = 0.00025
 DUELING = True
@@ -99,7 +99,7 @@ dqn = DQNAgent(model=model,
 dqn.compile(Adam(lr=LEARNING_RATE),
             metrics=['mae'])
 
-#dqn.load_weights('logs/cp/checkpoint-129.07-299-.h5f')
+dqn.load_weights('checkpoint-1.14-8000-.h5f')
 
 # Okay, now it's time to learn something!
 dqn.fit(env,
@@ -110,7 +110,7 @@ dqn.fit(env,
         action_repetition=ACTION_REPETITION)
 
 # After training is done, we save the final weights.
-dqn.save_weights('dqn_{}_weights.h5f'.format('mario'), overwrite=True)
+#dqn.save_weights('dqn_{}_weights.h5f'.format('mario'), overwrite=True)
 
 # Finally, evaluate our algorithm for 5 episodes.
 dqn.test(env, nb_episodes=5, visualize=True, action_repetition=ACTION_REPETITION)
