@@ -28,16 +28,16 @@ class Mario(EntityBase):
         self.animation = Animation([self.spriteCollection["mario_run1"].image,
                                     self.spriteCollection["mario_run2"].image,
                                     self.spriteCollection["mario_run3"].image
-                                   ],
-                                    self.spriteCollection["mario_idle"].image,
-                                    self.spriteCollection["mario_jump"].image)
-        
+                                    ],
+                                   self.spriteCollection["mario_idle"].image,
+                                   self.spriteCollection["mario_jump"].image)
+
         self.traits = {
             "jumpTrait": jumpTrait(self),
             "goTrait": goTrait(self.animation, screen, self.camera, self),
             "bounceTrait": bounceTrait(self)
         }
-        
+
         self.levelObj = level
         self.collision = Collider(self, level)
         self.screen = screen
@@ -63,11 +63,11 @@ class Mario(EntityBase):
         for ent in self.levelObj.entityList:
             collisionState = self.EntityCollider.check(ent)
             if collisionState.isColliding:
-                if(ent.type == "Item"):
+                if (ent.type == "Item"):
                     self._onCollisionWithItem(ent)
-                elif(ent.type == "Block"):
+                elif (ent.type == "Block"):
                     self._onCollisionWithBlock(ent)
-                elif(ent.type == "Mob"):
+                elif (ent.type == "Mob"):
                     self._onCollisionWithMob(ent, collisionState)
 
     def _onCollisionWithItem(self, item):
@@ -77,7 +77,7 @@ class Mario(EntityBase):
         self.sound.play_sfx(self.sound.coin)
 
     def _onCollisionWithBlock(self, block):
-        if(not block.triggered):
+        if (not block.triggered):
             self.sound.play_sfx(self.sound.bump)
         block.triggered = True
 
@@ -94,14 +94,14 @@ class Mario(EntityBase):
             self.bounce()
             mob.alive = False
         elif collisionState.isTop and mob.alive == "sleeping":
-            if(mob.rect.x < self.rect.x):
+            if (mob.rect.x < self.rect.x):
                 mob.leftrightTrait.direction = -1
             else:
                 mob.leftrightTrait.direction = 1
             mob.alive = "shellBouncing"
         elif collisionState.isColliding and mob.alive == True:
             self.gameOver()
-    
+
     def bounce(self):
         self.traits['bounceTrait'].jump = True
 
@@ -111,7 +111,7 @@ class Mario(EntityBase):
         else:
             ent.timer = 0
             ent.alive = "sleeping"
-        self.dashboard.points += 100
+        self.dashboard.points += -1000
 
     def gameOver(self):
         srf = pygame.Surface((640, 480))
@@ -120,17 +120,17 @@ class Mario(EntityBase):
         self.sound.music_channel.stop()
         self.sound.music_channel.play(self.sound.death)
 
-        for i in range(500, 20, -2):
-            srf.fill((0, 0, 0))
-            pygame.draw.circle(
-                srf, (255, 255, 255), (int(
-                    self.camera.x + self.rect.x) + 2, self.rect.y + 2), i)
-            self.screen.blit(srf, (0, 0))
-            pygame.display.update()
-            self.input.checkForInput()
-        while(self.sound.music_channel.get_busy()):
-            pygame.display.update()
-            self.input.checkForInput()
+        # for i in range(500, 20, -2):
+        #     srf.fill((0, 0, 0))
+        #     pygame.draw.circle(
+        #         srf, (255, 255, 255), (int(
+        #             self.camera.x + self.rect.x) + 2, self.rect.y + 2), i)
+        #     self.screen.blit(srf, (0, 0))
+        #     pygame.display.update()
+        #     self.input.checkForInput()
+        # while(self.sound.music_channel.get_busy()):
+        #     pygame.display.update()
+        #     self.input.checkForInput()
         self.restart = True
 
     def getPos(self):

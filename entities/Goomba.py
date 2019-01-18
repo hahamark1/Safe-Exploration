@@ -8,7 +8,7 @@ import pygame
 
 class Goomba(EntityBase):
     def __init__(self, screen, spriteColl, x, y, level):
-        super(Goomba, self).__init__(y, x - 1, 1.25)
+        super(Goomba, self).__init__(x, y - 1, 1.25)
         self.spriteCollection = spriteColl
         self.animation = Animation([self.spriteCollection.get("goomba-1").image,
                                     self.spriteCollection.get("goomba-2").image])

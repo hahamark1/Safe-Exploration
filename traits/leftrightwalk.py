@@ -1,11 +1,13 @@
 import classes.Maths
 from classes.Collider import Collider
 from random import randint
+import numpy as np
 
 
 class LeftRightWalkTrait():
     def __init__(self, entity, level):
-        self.direction = -1 if randint(0, 1) == 0 else 1
+        self.direction = np.random.choice([-1])
+        #self.direction = -1
         self.entity = entity
         self.collDetection = Collider(self.entity, level)
         self.speed = 1
