@@ -58,7 +58,7 @@ class MarioGym(gym.Env):
             pygame.mixer.pre_init(44100, -16, 2, 4096)
             pygame.init()
             self.screen = pygame.display.set_mode((640, 480))
-            self.max_frame_rate = 600
+            self.max_frame_rate = 60
             self.score = 0
             self.dashboard = Dashboard("./img/font.png", 8, self.screen)
             self.sound = Sound()
@@ -134,6 +134,7 @@ class MarioGym(gym.Env):
                     array[int(round(entity.rect.y / 8))][int(round(entity.rect.x / 8))] = 5
         array = np.hstack((np.zeros((600, padding-5)), array))
         array = np.hstack((np.ones((600, 5)), array))
+        array = np.hstack((array, np.ones((600, 5))))
         return array[12:52,
                int(round(self.mario.rect.x / 8)):int(round(self.mario.rect.x / 8)) + 2 * padding]
 
