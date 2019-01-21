@@ -23,7 +23,7 @@ class MarioGym(gym.Env):
         self.action_space = spaces.Discrete(6)
         self.observation_space = spaces.Box(low=-10000000, high=100000000, dtype=np.float, shape=(40, 80, 4))
 
-        self.levelname = 'Level-basic.json'
+        self.levelname = 'Level-basic-with-goombas.json'
         self.headless = headless
         self.score = 0
         self.max_frame_rate = 60
