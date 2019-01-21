@@ -37,7 +37,8 @@ class LevelHeadless():
                 elif entity['name'] == "Koopa":
                     self.addKoopa(position[0], position[1])
                 elif entity['name'] == "coin":
-                    self.addCoin(position[0], position[1])
+                    #self.addCoin(position[0], position[1])
+                    pass
                 elif entity['name'] == "randomBox":
                     self.addRandomBox(position[0], position[1])
 
