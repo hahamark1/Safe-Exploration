@@ -20,11 +20,23 @@ MOVES = ['moveLeft', 'moveRight', 'jump', 'jumpLeft', 'jumpRight', 'doNothing']
 class MarioGym(gym.Env):
 
     def __init__(self, headless=True):
-        self.levelname = 'Level-basic-with-goombas.json'
-        self.headless = headless
-        self.init_game()
         self.action_space = spaces.Discrete(6)
-        self.observation_space = spaces.Box(low=-10000000, high=100000000, dtype=np.float, shape=(40,80,4))
+        self.observation_space = spaces.Box(low=-10000000, high=100000000, dtype=np.float, shape=(40, 80, 4))
+
+        self.levelname = 'Level-basic.json'
+        self.headless = headless
+        self.score = 0
+        self.max_frame_rate = 60
+
+        self.observation = None
+        self.level = None
+        self.mario = None
+        self.screen = None
+        self.dashboard = None
+        self.sound = None
+        self.menu = None
+
+        self.init_game()
         self.reset()
 
     def reset(self):
@@ -35,6 +47,7 @@ class MarioGym(gym.Env):
     def step(self, action_num):
         action = MOVES[action_num]
         reward = self.do_game_step(action)
+
         self.observation = self.level_to_numpy()
         if self.observation.shape != (40, 80):
             self.observation = np.zeros((40, 80))
@@ -42,12 +55,11 @@ class MarioGym(gym.Env):
         info = {'info': 'jeej'}
 
         goomba_died = len([x for x in self.level.entityList
-                       if ((x.__class__.__name__ == 'Goomba'
-                            or x.__class__.__name__ == 'GoombaHeadless')
-                           and x.alive)]) != 11
+                          if ((x.__class__.__name__ == 'Goomba'
+                              or x.__class__.__name__ == 'GoombaHeadless')
+                              and x.alive)]) != 11
 
         restart = goomba_died or self.mario.restart
-
         return self.observation, reward, restart, info
 
     def render(self, mode='human', close=False):
@@ -58,8 +70,6 @@ class MarioGym(gym.Env):
             pygame.mixer.pre_init(44100, -16, 2, 4096)
             pygame.init()
             self.screen = pygame.display.set_mode((640, 480))
-            self.max_frame_rate = 60
-            self.score = 0
             self.dashboard = Dashboard("./img/font.png", 8, self.screen)
             self.sound = Sound()
             self.level = Level(self.screen, self.sound, self.dashboard, self.levelname)
@@ -85,10 +95,7 @@ class MarioGym(gym.Env):
         else:
             start_score = self.level.points
 
-        deadbonus = 0
-        mario_position = (int(self.mario.rect.y / 8), int(self.mario.rect.x / 8))
         counter = 0
-
         while counter < 5:
             counter += 1
             self.do_move(move)
@@ -99,6 +106,7 @@ class MarioGym(gym.Env):
                 self.clock.tick(self.max_frame_rate)
                 self.dashboard.update()
                 pygame.display.update()
+                self.score = self.dashboard.points
             else:
                 self.level.updateEntities()
                 self.mario.update()
@@ -135,8 +143,7 @@ class MarioGym(gym.Env):
         array = np.hstack((np.zeros((600, padding-5)), array))
         array = np.hstack((np.ones((600, 5)), array))
         array = np.hstack((array, np.ones((600, 5))))
-        return array[12:52,
-               int(round(self.mario.rect.x / 8)):int(round(self.mario.rect.x / 8)) + 2 * padding]
+        return array[12:52, int(round(self.mario.rect.x / 8)):int(round(self.mario.rect.x / 8)) + 2 * padding]
 
     def level_to_supersimple_numpy(self):
         array = np.zeros(6)
@@ -153,8 +160,6 @@ class MarioGym(gym.Env):
         array[3] = self.mario.vel.y
         array[4] = self.mario.rect.x
         return array
-
-        
 
     def do_move(self, move):
         if move == 'moveLeft':
