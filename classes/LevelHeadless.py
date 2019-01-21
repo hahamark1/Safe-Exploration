@@ -30,6 +30,7 @@ class LevelHeadless():
 
     def loadEntities(self, data):
         for entity in data['level']['entities']:
+            print(entity)
             for position in entity['positions']:
                 if entity['name'] == "Goomba":
                     self.addGoomba(position[0], position[1])
