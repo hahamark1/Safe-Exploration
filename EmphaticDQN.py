@@ -19,7 +19,7 @@ env = GridworldGym()
 
 # Atari Actions: 0 (noop), 1 (fire), 2 (left) and 3 (right) are valid actions
 VALID_ACTIONS = [0, 1, 2, 3]
-WINDOW_LENGTH = 1
+WINDOW_LENGTH = 3
 
 class StateProcessor():
     """
@@ -470,6 +470,6 @@ with tf.Session() as sess:
                                     epsilon_decay_steps=500000,
                                     discount_factor=0.99,
                                     batch_size=32,
-                                    selfishness=0.1):
+                                    selfishness=1.0):
 
         print("\nEpisode Reward: {}".format(stats.episode_rewards[-1]))
