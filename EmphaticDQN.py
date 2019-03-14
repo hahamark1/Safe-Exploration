@@ -91,11 +91,15 @@ class Estimator():
         batch_size = tf.shape(self.X_pl)[0]
 
 
+        conv1 = tf.contrib.layers.conv2d(
+            X, 32, 3, 1, padding='same', activation_fn=tf.nn.relu)
+        conv2 = tf.contrib.layers.conv2d(
+            conv1, 32, 3, 1, padding='same', activation_fn=tf.nn.relu)
+
         # Fully connected layers
-        flattened = tf.contrib.layers.flatten(X)
-        fc1 = tf.contrib.layers.fully_connected(flattened, 128, activation_fn=tf.nn.relu)
-        fc2 = tf.contrib.layers.fully_connected(fc1, 128, activation_fn=tf.nn.relu)
-        self.predictions = tf.contrib.layers.fully_connected(fc2, len(VALID_ACTIONS))
+        flattened = tf.contrib.layers.flatten(conv2)
+        fc1 = tf.contrib.layers.fully_connected(flattened, 256, activation_fn=tf.nn.relu)
+        self.predictions = tf.contrib.layers.fully_connected(fc1, len(VALID_ACTIONS))
 
         # Get the predictions for the chosen actions only
         gather_indices = tf.range(batch_size) * tf.shape(self.predictions)[1] + self.actions_pl
