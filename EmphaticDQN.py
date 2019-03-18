@@ -19,7 +19,7 @@ env = GridworldGym()
 
 # Atari Actions: 0 (noop), 1 (fire), 2 (left) and 3 (right) are valid actions
 VALID_ACTIONS = [0, 1, 2, 3]
-WINDOW_LENGTH = 3
+WINDOW_LENGTH = 1
 
 class StateProcessor():
     """
@@ -445,7 +445,7 @@ def deep_q_learning(sess,
 tf.reset_default_graph()
 
 # Where we save our checkpoints and graphs
-experiment_dir = os.path.abspath("./experiments/{}".format('gridworld11_self0.5_conv_run1'))
+experiment_dir = os.path.abspath("./experiments/{}".format('gridworld11_self0.5_experiment2.0_run1'))
 
 # Create a glboal step variable
 global_step = tf.Variable(0, name='global_step', trainable=False)

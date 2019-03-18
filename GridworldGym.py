@@ -89,28 +89,26 @@ class GridworldGym(gym.Env):
         #increase counter
         self.steps += 1
 
-        #move agent
-        if action_num == 0:
-            self.agent_position = [(self.agent_position[0] + 1) % GRIDWORLD_SIZE, self.agent_position[1]]
-        elif action_num == 1:
-            self.agent_position = [(self.agent_position[0] - 1) % GRIDWORLD_SIZE, self.agent_position[1]]
-        elif action_num == 2:
-            self.agent_position = [self.agent_position[0], (self.agent_position[1] + 1) % GRIDWORLD_SIZE]
-        elif action_num == 3:
-            self.agent_position = [self.agent_position[0], (self.agent_position[1] - 1) % GRIDWORLD_SIZE]
-
-        if PLOT:
-            #self.plot_env()
-            a=1
-
         #update agents
         restart = (self.agent_position in [[x[0] +1, x[1]] for x in self.enemy_positions]) or (self.agent_position in [[x[0], x[1] +1] for x in self.enemy_positions])
         num_enemies_killed = self.kill_enemies()
 
-        if PLOT:
-            self.plot_env()
+        if not restart and self.steps % 2 == 0:
 
-        if not restart:
+            #move agent
+            if action_num == 0:
+                self.agent_position = [(self.agent_position[0] + 1) % GRIDWORLD_SIZE, self.agent_position[1]]
+            elif action_num == 1:
+                self.agent_position = [(self.agent_position[0] - 1) % GRIDWORLD_SIZE, self.agent_position[1]]
+            elif action_num == 2:
+                self.agent_position = [self.agent_position[0], (self.agent_position[1] + 1) % GRIDWORLD_SIZE]
+            elif action_num == 3:
+                self.agent_position = [self.agent_position[0], (self.agent_position[1] - 1) % GRIDWORLD_SIZE]
+
+            if PLOT:
+                self.plot_env()
+
+        elif not restart:
             #move enemies
             for i, pos in enumerate(self.enemy_positions):
                 action = np.random.choice(range(4))
@@ -125,14 +123,9 @@ class GridworldGym(gym.Env):
                 self.enemy_positions[i] = pos
 
             if PLOT:
-                #self.plot_env()
-                a=1
-            #update agents
-            restart = (self.agent_position in [[x[0] +1, x[1]] for x in self.enemy_positions]) or (self.agent_position in [[x[0], x[1] +1] for x in self.enemy_positions])
-            num_enemies_killed += self.kill_enemies()
-
-            if PLOT:
                 self.plot_env()
+                a=1
+
 
         if restart:
             self.reset()
