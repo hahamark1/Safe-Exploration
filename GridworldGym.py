@@ -11,7 +11,7 @@ from gym.utils import seeding
 MOVES = ['moveLeft', 'moveRight', 'moveUp', 'moveDown']
 PLOT = False
 GRIDWORLD_SIZE = 11
-MAX_STEPS = 200
+MAX_STEPS = 400
 
 class GridworldGym(gym.Env):
 

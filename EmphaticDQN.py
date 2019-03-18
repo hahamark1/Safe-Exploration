@@ -445,7 +445,7 @@ def deep_q_learning(sess,
 tf.reset_default_graph()
 
 # Where we save our checkpoints and graphs
-experiment_dir = os.path.abspath("./experiments/{}".format('gridworld11_self1.0_experiment2.0_run1'))
+experiment_dir = os.path.abspath("./experiments/{}".format('gridworld11_self0.5_experiment2.1_run1'))
 
 # Create a glboal step variable
 global_step = tf.Variable(0, name='global_step', trainable=False)
@@ -474,6 +474,6 @@ with tf.Session() as sess:
                                     epsilon_decay_steps=500000,
                                     discount_factor=0.99,
                                     batch_size=32,
-                                    selfishness=1.0):
+                                    selfishness=0.5):
 
         print("\nEpisode Reward: {}".format(stats.episode_rewards[-1]))
