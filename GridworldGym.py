@@ -26,7 +26,8 @@ class GridworldGym(gym.Env):
 
         self.agent_position = [6, 6]
         #self.enemy_positions = [[x, y] for x in range(5, 40, 5) for y in range(5, 40, 5)]
-        self.enemy_positions = [[1,GRIDWORLD_SIZE],[GRIDWORLD_SIZE,1], [1,1], [GRIDWORLD_SIZE,GRIDWORLD_SIZE]]
+        #self.enemy_positions = [[1,GRIDWORLD_SIZE],[GRIDWORLD_SIZE,1], [1,1], [GRIDWORLD_SIZE,GRIDWORLD_SIZE]]
+        self.enemy_positions = [[0,0]]
         self.steps = 0
         self.get_observation()
 

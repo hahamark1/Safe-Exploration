@@ -6,7 +6,7 @@ import os
 import random
 import sys
 
-from MarioGym import MarioGym
+from GridworldGym import GridworldGym
 import tensorflow as tf
 
 if "../" not in sys.path:
@@ -15,10 +15,10 @@ if "../" not in sys.path:
 from lib import plotting
 from collections import deque, namedtuple
 
-env = MarioGym(headless=True)
+env = GridworldGym()
 
 # Atari Actions: 0 (noop), 1 (fire), 2 (left) and 3 (right) are valid actions
-VALID_ACTIONS = [0, 1, 2, 3,4 ,5 ]
+VALID_ACTIONS = [0, 1, 2, 3]
 WINDOW_LENGTH = 1
 
 class StateProcessor():
@@ -28,17 +28,16 @@ class StateProcessor():
     def __init__(self):
         # Build the Tensorflow graph
         with tf.variable_scope("state_processor"):
-            self.input_state = tf.placeholder(shape=[64, 64, 2], dtype=tf.uint8)
+            self.input_state = tf.placeholder(shape=[7, 7, 2], dtype=tf.uint8)
 
             self.output1 = tf.expand_dims(self.input_state[:,:,0], 2)
-
             self.output1 = tf.image.resize_images(
-                self.output1, [84, 84], method=tf.image.ResizeMethod.NEAREST_NEIGHBOR)
+                self.output1, [7, 7], method=tf.image.ResizeMethod.NEAREST_NEIGHBOR)
             self.output1 = tf.squeeze(self.output1)
 
             self.output2 = tf.expand_dims(self.input_state[:,:,1], 2)
             self.output2 = tf.image.resize_images(
-                self.output2, [84, 84], method=tf.image.ResizeMethod.NEAREST_NEIGHBOR)
+                self.output2, [7, 7], method=tf.image.ResizeMethod.NEAREST_NEIGHBOR)
             self.output2 = tf.squeeze(self.output2)
 
 
@@ -82,7 +81,7 @@ class Estimator():
 
         # Placeholders for our input
         # Our input are WINDOW_LENGTH RGB frames of shape 160, 160 each
-        self.X_pl = tf.placeholder(shape=[None, 84, 84, WINDOW_LENGTH], dtype=tf.uint8, name="X")
+        self.X_pl = tf.placeholder(shape=[None, 7, 7, WINDOW_LENGTH], dtype=tf.uint8, name="X")
         # The TD target value
         self.y_pl = tf.placeholder(shape=[None], dtype=tf.float32, name="y")
         # Integer id of which action was selected
@@ -92,17 +91,14 @@ class Estimator():
         batch_size = tf.shape(self.X_pl)[0]
 
 
-        # Three convolutional layers
         conv1 = tf.contrib.layers.conv2d(
-            X, 32, 8, 4, activation_fn=tf.nn.relu)
+            X, 32, 3, 1, padding='same', activation_fn=tf.nn.relu)
         conv2 = tf.contrib.layers.conv2d(
-            conv1, 64, 4, 2, activation_fn=tf.nn.relu)
-        conv3 = tf.contrib.layers.conv2d(
-            conv2, 64, 3, 1, activation_fn=tf.nn.relu)
+            conv1, 32, 3, 1, padding='same', activation_fn=tf.nn.relu)
 
         # Fully connected layers
-        flattened = tf.contrib.layers.flatten(conv3)
-        fc1 = tf.contrib.layers.fully_connected(flattened, 512)
+        flattened = tf.contrib.layers.flatten(conv2)
+        fc1 = tf.contrib.layers.fully_connected(flattened, 256, activation_fn=tf.nn.relu)
         self.predictions = tf.contrib.layers.fully_connected(fc1, len(VALID_ACTIONS))
 
         # Get the predictions for the chosen actions only
@@ -449,7 +445,7 @@ def deep_q_learning(sess,
 tf.reset_default_graph()
 
 # Where we save our checkpoints and graphs
-experiment_dir = os.path.abspath("./experiments/{}".format('mario_version1.1_self1.0_run1'))
+experiment_dir = os.path.abspath("./experiments/{}".format('gridworld11_self1.0_experiment2.1_run1'))
 
 # Create a glboal step variable
 global_step = tf.Variable(0, name='global_step', trainable=False)
