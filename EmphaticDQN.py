@@ -19,7 +19,7 @@ env = MarioGym(headless=True)
 
 # Atari Actions: 0 (noop), 1 (fire), 2 (left) and 3 (right) are valid actions
 VALID_ACTIONS = [0, 1, 2, 3,4 ,5 ]
-WINDOW_LENGTH = 1
+WINDOW_LENGTH = 4
 
 class StateProcessor():
     """
@@ -449,7 +449,7 @@ def deep_q_learning(sess,
 tf.reset_default_graph()
 
 # Where we save our checkpoints and graphs
-experiment_dir = os.path.abspath("./experiments/{}".format('mario_version1.1_self1.0_run1'))
+experiment_dir = os.path.abspath("./experiments/{}".format('mario_version1.2_self1.0_run1'))
 
 # Create a glboal step variable
 global_step = tf.Variable(0, name='global_step', trainable=False)
