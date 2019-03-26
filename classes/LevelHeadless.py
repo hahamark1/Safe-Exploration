@@ -18,6 +18,7 @@ class LevelHeadless():
         self.points = 0
         self.clock = 0
         self.entityList = []
+        self.groundList = []
         self.loadLevel(levelname)
 
     def loadLevel(self, levelname):
@@ -36,7 +37,8 @@ class LevelHeadless():
                 elif entity['name'] == "Koopa":
                     self.addKoopa(position[0], position[1])
                 elif entity['name'] == "coin":
-                    self.addCoin(position[0], position[1])
+                    #self.addCoin(position[0], position[1])
+                    pass
                 elif entity['name'] == "randomBox":
                     self.addRandomBox(position[0], position[1])
 
@@ -51,6 +53,9 @@ class LevelHeadless():
                     self.addPipeSprite(position[0], position[1], position[2])
                 elif(obj['name'] == "coin"):
                     self.addCoin(position[0], position[1])
+                elif(obj['name'] == "ground"):
+                    self.groundList.append([position[0], position[1]])
+
 
     def loadLayers(self, data):
         levelx = []
@@ -65,6 +70,12 @@ class LevelHeadless():
                             Tile(
                                 None,
                                 None))
+                    elif(layer['spritename'] == 'ground'):
+                        levelx.append(
+                            Tile(
+                                None, pygame.Rect(
+                                    x * 32, (y - 1) * 32, 32, 32)))
+                        self.groundList.append([x,y])
                     else:
                         levelx.append(
                             Tile(

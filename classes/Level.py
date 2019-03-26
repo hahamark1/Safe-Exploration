@@ -19,6 +19,7 @@ class Level():
         self.level = None
         self.levelLength = 0
         self.entityList = []
+        self.groundList = []
         self.loadLevel(levelname)
 
     def loadLevel(self, levelname):
@@ -41,6 +42,7 @@ class Level():
                 elif entity['name'] == "randomBox":
                     self.addRandomBox(position[0], position[1])
 
+
     def loadLayers(self, data):
         levelx = []
         levely = []
@@ -55,6 +57,13 @@ class Level():
                                 self.sprites.spriteCollection.get(
                                     layer['spritename']),
                                 None))
+                    elif(layer['spritename'] == 'ground'):
+                        levelx.append(
+                            Tile(
+                                self.sprites.spriteCollection.get(
+                                    layer['spritename']), pygame.Rect(
+                                    x * 32, (y - 1) * 32, 32, 32)))
+                        self.groundList.append([x,y])
                     else:
                         levelx.append(
                             Tile(
@@ -80,6 +89,10 @@ class Level():
                 elif(obj['name'] == "sky"):
                     self.level[position[1]][position[0]] = Tile(
                         self.sprites.spriteCollection.get(obj['name']), None)
+                elif(obj['name'] == "ground"):
+                    self.level[position[1]][position[0]] = Tile(self.sprites.spriteCollection.get(
+                        obj['name']), pygame.Rect(position[0] * 32, position[1] * 32, 32, 32))
+                    self.groundList.append([position[0], position[1]])
                 else:
                     self.level[position[1]][position[0]] = Tile(self.sprites.spriteCollection.get(
                         obj['name']), pygame.Rect(position[0] * 32, position[1] * 32, 32, 32))
