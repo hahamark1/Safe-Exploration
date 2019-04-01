@@ -6,7 +6,7 @@ from entities.Koopa import Koopa
 from entities.GoombaHeadless import GoombaHeadless
 from entities.RandomBox import RandomBox
 from classes.Tile import Tile
-from entities.Coin import Coin
+from entities.CoinHeadless import CoinHeadless
 import numpy as np
 from copy import copy
 
@@ -16,6 +16,7 @@ class LevelHeadless():
         self.level = None
         self.levelLength = 0
         self.points = 0
+        self.coins = 0
         self.clock = 0
         self.entityList = []
         self.groundList = []
@@ -37,8 +38,8 @@ class LevelHeadless():
                 elif entity['name'] == "Koopa":
                     self.addKoopa(position[0], position[1])
                 elif entity['name'] == "coin":
-                    #self.addCoin(position[0], position[1])
-                    pass
+                    self.addCoin(position[0], position[1])
+                    # pass
                 elif entity['name'] == "randomBox":
                     self.addRandomBox(position[0], position[1])
 
@@ -105,7 +106,7 @@ class LevelHeadless():
 
     def addCoin(self, x, y):
         self.entityList.append(
-            Coin(x, y)
+            CoinHeadless(x, y)
         )
 
     def addGoomba(self, x, y):

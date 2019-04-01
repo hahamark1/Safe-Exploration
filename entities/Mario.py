@@ -20,6 +20,7 @@ from classes.Input import Input
 class Mario(EntityBase):
     def __init__(self, x, y, level, screen, dashboard, sound, gravity=1.25):
         super(Mario, self).__init__(x, y, gravity)
+        print(x,y)
         self.spriteCollection = Sprites().spriteCollection
         self.camera = Camera(self.rect, self)
         self.sound = sound

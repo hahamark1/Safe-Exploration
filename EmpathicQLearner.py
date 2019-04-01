@@ -21,7 +21,7 @@ class EmphaticQLearner():
         self.learning_rate = 0.05
         self.future_discount = 0.99
         self.selfishness = 0.5
-        self.writer = tf.summary.FileWriter(f'logs/EQLearning3.0/{str(datetime.now())}/selfishness_{self.selfishness}')
+        self.writer = tf.summary.FileWriter(f'logs/LRLearning3.0/{str(datetime.now())}')
         self.step = 0
         self.log_q_values=[[]]
 

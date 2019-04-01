@@ -3,15 +3,15 @@ import pygame
 
 
 class Dashboard(Font):
-    def __init__(self, filePath, size, screen):
+    def __init__(self, filePath, size, screen, coins=0, points=0, time=0):
         Font.__init__(self, filePath, size)
         self.state = "menu"
         self.screen = screen
         self.levelName = "1-1"
-        self.points = 0
-        self.coins = 0
+        self.points = points
+        self.coins = coins
         self.ticks = 0
-        self.time = 0
+        self.time = time
 
     def update(self):
         self.drawText("MARIO", 50, 20, 15)

@@ -15,9 +15,9 @@ if "../" not in sys.path:
 from lib import plotting
 from collections import deque, namedtuple
 
-env = MarioGym(headless=True)
+env = MarioGym(headless=True, level_name='Level-5-coins.json', no_coins=5)
 
-# Atari Actions: 0 (noop), 1 (fire), 2 (left) and 3 (right) are valid actions
+# Atari Actions: 0 (noop), 1 (fire), 2 (left) and 3 (rig)
 VALID_ACTIONS = [0, 1, 2, 3,4 ,5 ]
 WINDOW_LENGTH = 4
 
@@ -114,7 +114,7 @@ class Estimator():
         self.loss = tf.reduce_mean(self.losses)
 
         # Optimizer Parameters from original paper
-        self.optimizer = tf.train.RMSPropOptimizer(0.00025, 0.99, 0.0, 1e-6)
+        self.optimizer = tf.train.RMSPropOptimizer(0.025, 0.99, 0.0, 1e-6)
         self.train_op = self.optimizer.minimize(self.loss, global_step=tf.contrib.framework.get_global_step())
 
         # Summaries for Tensorboard
@@ -260,7 +260,8 @@ def deep_q_learning(sess,
     stats = plotting.EpisodeStats(
         episode_lengths=np.zeros(num_episodes),
         episode_rewards=np.zeros(num_episodes),
-        episode_kills=np.zeros(num_episodes))
+        episode_kills=np.zeros(num_episodes),
+        episode_coins=np.zeros(num_episodes))
 
     # Create directories for checkpoints and summaries
     checkpoint_dir = os.path.join(experiment_dir, "checkpoints")
@@ -305,6 +306,12 @@ def deep_q_learning(sess,
         action = np.random.choice(np.arange(len(action_probs)), p=action_probs)
 
         next_total_state, reward, done, info = env.step(VALID_ACTIONS[action])
+
+        if env.mario.rect.x > 33 * env.level.levelLength:
+            if env.count_entities() == 0:
+                done = True
+            else:
+                env.reset_clean(env.mario.rect.y)
 
         next_state = state_processor.process(sess, next_total_state, 1)
         next_state = np.append(state[:,:,1:], np.expand_dims(next_state, 2), axis=2)
@@ -378,6 +385,12 @@ def deep_q_learning(sess,
             action = np.random.choice(np.arange(len(action_probs)), p=action_probs)
             next_total_state, reward, done, info = env.step(VALID_ACTIONS[action])
 
+            if env.env.mario.rect.x > 33 * env.env.level.levelLength:
+                if env.env.count_entities() == 0:
+                    done = True
+                else:
+                    env.env.reset_clean(env.env.mario.rect.y)
+
             next_state = state_processor.process(sess, next_total_state, 1)
             next_state = np.append(state[:, :, 1:], np.expand_dims(next_state, 2), axis=2)
 
@@ -394,15 +407,18 @@ def deep_q_learning(sess,
             replay_memory.append(Transition(total_state, action, reward, next_total_state, done))
 
             # Update statistics
+            if reward > 0:
+                print(reward)
             stats.episode_rewards[i_episode] += reward
             stats.episode_lengths[i_episode] = t
             stats.episode_kills[i_episode] += info['num_killed']
+            stats.episode_coins[i_episode] += info['coins_taken']
 
             # Sample a minibatch from the replay memory
             samples = random.sample(replay_memory, batch_size)
             states_batch, action_batch, reward_batch, next_states_batch, done_batch = map(np.array, zip(*samples))
 
-            # Calculate q values and targets (Double DQN)
+            # Calculate q values and targets (Double DQN)coins_left
             q_values_next = q_estimator.predict(sess, next_states_batch[:,:,:,0,:])
             q_values_enemy_next = q_estimator.predict(sess, next_states_batch[:,:,:,1,:])
 
@@ -434,13 +450,17 @@ def deep_q_learning(sess,
         episode_summary.value.add(simple_value=stats.episode_rewards[i_episode], node_name="episode_reward", tag="episode_reward")
         episode_summary.value.add(simple_value=stats.episode_lengths[i_episode], node_name="episode_length", tag="episode_length")
         episode_summary.value.add(simple_value=stats.episode_kills[i_episode], node_name="episode_kills", tag="episode_kills")
+        episode_summary.value.add(simple_value=stats.episode_coins[i_episode], node_name="episode_coins",
+                                  tag="episode_coins")
         q_estimator.summary_writer.add_summary(episode_summary, total_t)
         q_estimator.summary_writer.flush()
 
         yield total_t, plotting.EpisodeStats(
             episode_lengths=stats.episode_lengths[:i_episode+1],
             episode_rewards=stats.episode_rewards[:i_episode+1],
-            episode_kills=stats.episode_kills[:i_episode+1])
+            episode_kills=stats.episode_kills[:i_episode+1],
+            episode_coins=stats.episode_coins[:i_episode+1])
+
 
     env.monitor.close()
     return stats
@@ -449,7 +469,7 @@ def deep_q_learning(sess,
 tf.reset_default_graph()
 
 # Where we save our checkpoints and graphs
-experiment_dir = os.path.abspath("./experiments/{}".format('mario_version1.2_self1.0_run1'))
+experiment_dir = os.path.abspath("./experiments/{}".format('mario_version_LR _run1'))
 
 # Create a glboal step variable
 global_step = tf.Variable(0, name='global_step', trainable=False)

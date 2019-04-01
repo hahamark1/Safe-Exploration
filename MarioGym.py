@@ -6,6 +6,9 @@ import time
 from classes.Level import Level
 from classes.LevelHeadless import LevelHeadless
 from entities.Mario import Mario
+from entities.Coin import Coin
+from entities.CoinHeadless import CoinHeadless
+
 from entities.MarioHeadless import MarioHeadless
 from classes.Dashboard import Dashboard
 from classes.Sound import Sound
@@ -20,11 +23,11 @@ MOVES = ['moveLeft', 'moveRight', 'jump', 'jumpLeft', 'jumpRight', 'doNothing']
 
 class MarioGym(gym.Env):
 
-    def __init__(self, headless=True):
+    def __init__(self, headless=True, level_name='Level-basic-one-goomba.json', no_coins=0):
         self.action_space = spaces.Discrete(6)
         self.observation_space = spaces.Box(low=-10000000, high=100000000, dtype=np.float, shape=(40, 80, 4))
 
-        self.levelname = 'Level-basic-one-goomba.json'
+        self.levelname = level_name
         self.headless = headless
         self.score = 0
         self.max_frame_rate = 60
@@ -36,6 +39,8 @@ class MarioGym(gym.Env):
         self.dashboard = None
         self.sound = None
         self.menu = None
+        self.no_coins = no_coins
+        self.coins_start = self.no_coins
 
         self.init_game()
         self.reset()
@@ -46,6 +51,25 @@ class MarioGym(gym.Env):
         self.observation = self.level_to_empathic_numpy()
         return self.observation
 
+    def reset_clean(self, y_pos):
+        self.init_game(y_position=y_pos)
+        # self.steps = 0
+        self.coins_taken = self.coins_start - self.no_coins
+
+        self.no_coins = min(5, self.no_coins * 2)
+        self.coins_start = self.no_coins
+        self.level_name = 'Level-{}-coins.json'.format(self.no_coins)
+
+        if not self.headless:
+            self.dashboard = Dashboard("./img/font.png", 8, self.screen, coins=0, points=0, time=0)
+            self.level = Level(self.screen, self.sound, self.dashboard, self.levelname)
+        else:
+            self.level = LevelHeadless(self.levelname)
+
+        self.observation = self.level_to_empathic_numpy()
+
+        return self.observation
+
     def step(self, action_num):
         self.steps += 1
         action = MOVES[action_num]
@@ -54,36 +78,42 @@ class MarioGym(gym.Env):
                               or x.__class__.__name__ == 'GoombaHeadless')
                               and x.alive)])
 
+        coins = len([x for x in self.level.entityList
+                          if ((x.__class__.__name__ == 'Coin'))])
+
         reward = self.do_game_step(action)
 
         goombas_died = num_goombas - len([x for x in self.level.entityList
                           if ((x.__class__.__name__ == 'Goomba'
                               or x.__class__.__name__ == 'GoombaHeadless')
                               and x.alive)])
+
+        coins_taken = coins - len([x for x in self.level.entityList if ((x.__class__.__name__ == 'Coin'))])
         self.observation = self.level_to_empathic_numpy()
 
-        info = {'num_killed': goombas_died}
+        info = {'num_killed': goombas_died,
+                'coins_taken': coins_taken}
 
 
-        restart = self.mario.restart or self.steps >= 500
+        restart = self.mario.restart or self.steps >= 2000
 
         return self.observation, reward, restart, info
 
     def render(self, mode='human', close=False):
         pass
 
-    def init_game(self):
+    def init_game(self, y_position=0, coins=0, points=0, time=0):
         if not self.headless:
             pygame.mixer.pre_init(44100, -16, 2, 4096)
             pygame.init()
             self.screen = pygame.display.set_mode((640, 480))
-            self.dashboard = Dashboard("./img/font.png", 8, self.screen)
+            self.dashboard = Dashboard("./img/font.png", 8, self.screen, coins=0, points=0, time=0)
             self.sound = Sound()
             self.level = Level(self.screen, self.sound, self.dashboard, self.levelname)
             self.menu = Menu(self.screen, self.dashboard, self.level, self.sound)
             self.menu.update()
 
-            self.mario = Mario(0, 0, self.level, self.screen, self.dashboard, self.sound)
+            self.mario = Mario(0, y_position/32, self.level, self.screen, self.dashboard, self.sound)
             self.clock = pygame.time.Clock()
 
             self.menu.dashboard.state = "play"
@@ -103,9 +133,12 @@ class MarioGym(gym.Env):
             start_score = self.level.points
 
         counter = 0
+        reward = 0
         while counter < 5:
             counter += 1
+            coins = self.return_coins()
             self.do_move(move)
+
             if not self.headless:
                 pygame.display.set_caption("{:.2f} FPS".format(self.clock.get_fps()))
                 self.level.drawLevel(self.mario.camera)
@@ -120,24 +153,19 @@ class MarioGym(gym.Env):
                 self.clock += (1.0 / 60.0)
                 self.score = self.level.points
 
-            # if self.mario.restart:
-            #     deadbonus = -1000
 
-            # plt.matshow(self.observation[:,:,0], 1, cmap='gray')
-            # plt.draw()
-            # plt.pause(0.01)
-            # plt.clf()
 
             #reward = 0.001 * (self.score - start_score + deadbonus)
-            reward = 1
+            reward += coins - self.return_coins()
+            if reward > 0:
+                print('He found a coin!!!')
 
-        return reward
+        return 100 * reward
 
     def level_to_numpy(self):
         granularity = 8
 
         padding = int(256/granularity)
-
         level_size = self.level.levelLength*padding
         array = np.zeros((level_size, level_size))
 
@@ -163,6 +191,24 @@ class MarioGym(gym.Env):
         array = np.vstack((np.zeros((padding, level_size+padding)), array))
         return array[max(0, int(round(self.mario.rect.y / granularity))): max(0,int(round(self.mario.rect.y / granularity))) + 2*padding, int(round(self.mario.rect.x / granularity)):int(round(self.mario.rect.x / granularity)) + 2 * padding]
 
+
+    def count_entities(self, entity='coin'):
+
+        if self.headless:
+            no_entity = len([entity for entity in self.level.entityList if isinstance(entity, CoinHeadless)])
+        else:
+            no_entity = len([entity for entity in self.level.entityList if isinstance(entity, Coin)])
+        self.no_coins = no_entity
+
+
+    def return_coins(self, entity='coin'):
+
+        if self.headless:
+            no_entity = len([entity for entity in self.level.entityList if isinstance(entity, CoinHeadless)])
+        else:
+            no_entity = len([entity for entity in self.level.entityList if isinstance(entity, Coin)])
+        return no_entity
+
     def level_to_empathic_numpy(self):
         granularity = 8
 
@@ -176,7 +222,6 @@ class MarioGym(gym.Env):
         mario_representation = 128
         ground_representaion = 64
         enemy_representation = 255
-
         array[mario_pos[0]][mario_pos[1]] = mario_representation
 
         closest_enemy = None

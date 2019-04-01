@@ -1,0 +1,50 @@
+{
+    "id":0,
+    "length":45,
+    "level":{
+        "objects":[
+            {
+                "name":"bush",
+                "positions":[
+                    [2,12],
+                    [12,12]
+                ]
+            },
+            {
+                "name":"cloud",
+                "positions":[
+                    [5,5],
+                    [13,3]
+                ]
+            }
+
+        ],
+        "layers":[
+            {
+                "spritename":"sky",
+                "ranges":{
+                    "x":[0,30],
+                    "y":[0,13]
+                }
+            },
+            {
+                "spritename":"ground",
+                "ranges":{
+                    "x":[0,30],
+                    "y":[14,16]
+                }
+            }
+        ],
+        "entities":[
+
+            {
+                "name":"coin",
+                "positions":[
+                    [8,9],
+                    [16,9],
+                    [24,9]
+                ]}
+
+        ]
+    }
+}
