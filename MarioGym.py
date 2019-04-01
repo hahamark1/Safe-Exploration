@@ -94,9 +94,9 @@ class MarioGym(gym.Env):
         info = {'num_killed': goombas_died,
                 'coins_taken': coins_taken}
 
-
-        restart = self.mario.restart or self.steps >= 2000
-
+        restart = (self.count_entities() == 0 or self.steps >= 2000)
+        # restart = self.mario.restart or self.steps >= 2000
+        # print(reward)
         return self.observation, reward, restart, info
 
     def render(self, mode='human', close=False):
@@ -157,8 +157,9 @@ class MarioGym(gym.Env):
 
             #reward = 0.001 * (self.score - start_score + deadbonus)
             reward += coins - self.return_coins()
-            if reward > 0:
-                print('He found a coin!!!')
+            # if reward > 0:
+                # print('He found a coin!!!')
+                # print(reward)
 
         return 100 * reward
 
@@ -305,6 +306,3 @@ if __name__ == "__main__":
         else:
             env.do_game_step(np.random.choice(MOVES))
             env.observation = env.level_to_empathic_numpy()
-
-
-

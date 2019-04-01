@@ -306,7 +306,6 @@ def deep_q_learning(sess,
         action = np.random.choice(np.arange(len(action_probs)), p=action_probs)
 
         next_total_state, reward, done, info = env.step(VALID_ACTIONS[action])
-
         if env.mario.rect.x > 33 * env.level.levelLength:
             if env.count_entities() == 0:
                 done = True
@@ -407,8 +406,6 @@ def deep_q_learning(sess,
             replay_memory.append(Transition(total_state, action, reward, next_total_state, done))
 
             # Update statistics
-            if reward > 0:
-                print(reward)
             stats.episode_rewards[i_episode] += reward
             stats.episode_lengths[i_episode] = t
             stats.episode_kills[i_episode] += info['num_killed']
@@ -469,7 +466,7 @@ def deep_q_learning(sess,
 tf.reset_default_graph()
 
 # Where we save our checkpoints and graphs
-experiment_dir = os.path.abspath("./experiments/{}".format('mario_version_LR _run1'))
+experiment_dir = os.path.abspath("./experiments/{}".format('mario_version_LR _run2'))
 
 # Create a glboal step variable
 global_step = tf.Variable(0, name='global_step', trainable=False)
