@@ -52,6 +52,7 @@ class MarioGym(gym.Env):
         return self.observation
 
     def reset_clean(self, y_pos):
+        print('I got to the next level')
         self.init_game(y_position=y_pos)
         # self.steps = 0
         self.coins_taken = self.coins_start - self.no_coins
