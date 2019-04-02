@@ -276,7 +276,6 @@ def deep_q_learning(sess,
 
     saver = tf.train.Saver()
     # print(latest_checkpoint)
-    print(checkpoint_dir)
     # Load a previous checkpoint if we find one
     latest_checkpoint = tf.train.latest_checkpoint(checkpoint_dir)
 
@@ -387,13 +386,9 @@ def deep_q_learning(sess,
             action_probs = policy(sess, state, epsilon)
             action = np.random.choice(np.arange(len(action_probs)), p=action_probs)
             next_total_state, reward, done, info = env.step(VALID_ACTIONS[action])
-            # print("\nThe current x position is {}, which is smaller than {}".format(env.env.mario.rect.x, 33 * env.env.level.levelLength))
             if env.env.mario.rect.x > MAP_MULTIPLIER * env.env.level.levelLength:
-                print('The number of coins left is {}'.format(env.env.return_coins()))
                 if env.env.return_coins() == 0:
-                    print('Too many coins taken')
                     done = True
-
                     env.stats_recorder.done = True
                 else:
                     env.env.reset_clean(env.env.mario.rect.y)
