@@ -56,9 +56,12 @@ class MarioGym(gym.Env):
         self.init_game(y_position=y_pos)
         # self.steps = 0
         self.coins_taken = self.coins_start - self.no_coins
+        print('The number of coins_taken is {}'.format(self.coins_taken))
 
         self.no_coins = min(5, self.no_coins * 2)
         self.coins_start = self.no_coins
+        print('The new number of coins is: {}'.format(self.no_coins))
+
         self.level_name = 'Level-{}-coins.json'.format(self.no_coins)
 
         if not self.headless:
@@ -95,8 +98,8 @@ class MarioGym(gym.Env):
         info = {'num_killed': goombas_died,
                 'coins_taken': coins_taken}
 
-        restart = (self.count_entities() == 0 or self.steps >= 2000)
-        # restart = self.mario.restart or self.steps >= 2000
+        # restart = (self.return_coins() == 0 or self.steps >= 2000)
+        restart = self.mario.restart or self.steps >= 2000
         # print(reward)
         return self.observation, reward, restart, info
 

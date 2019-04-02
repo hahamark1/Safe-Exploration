@@ -20,6 +20,7 @@ env = MarioGym(headless=True, level_name='Level-5-coins.json', no_coins=5)
 # Atari Actions: 0 (noop), 1 (fire), 2 (left) and 3 (rig)
 VALID_ACTIONS = [0, 1, 2, 3,4 ,5 ]
 WINDOW_LENGTH = 4
+MAP_MULTIPLIER = 30.9
 
 class StateProcessor():
     """
@@ -274,8 +275,11 @@ def deep_q_learning(sess,
         os.makedirs(monitor_path)
 
     saver = tf.train.Saver()
+    # print(latest_checkpoint)
+    print(checkpoint_dir)
     # Load a previous checkpoint if we find one
     latest_checkpoint = tf.train.latest_checkpoint(checkpoint_dir)
+
     if latest_checkpoint:
         print("Loading model checkpoint {}...\n".format(latest_checkpoint))
         saver.restore(sess, latest_checkpoint)
@@ -306,8 +310,8 @@ def deep_q_learning(sess,
         action = np.random.choice(np.arange(len(action_probs)), p=action_probs)
 
         next_total_state, reward, done, info = env.step(VALID_ACTIONS[action])
-        if env.mario.rect.x > 33 * env.level.levelLength:
-            if env.count_entities() == 0:
+        if env.mario.rect.x > MAP_MULTIPLIER * env.level.levelLength:
+            if env.return_coins() == 0:
                 done = True
             else:
                 env.reset_clean(env.mario.rect.y)
@@ -383,10 +387,14 @@ def deep_q_learning(sess,
             action_probs = policy(sess, state, epsilon)
             action = np.random.choice(np.arange(len(action_probs)), p=action_probs)
             next_total_state, reward, done, info = env.step(VALID_ACTIONS[action])
-
-            if env.env.mario.rect.x > 33 * env.env.level.levelLength:
-                if env.env.count_entities() == 0:
+            # print("\nThe current x position is {}, which is smaller than {}".format(env.env.mario.rect.x, 33 * env.env.level.levelLength))
+            if env.env.mario.rect.x > MAP_MULTIPLIER * env.env.level.levelLength:
+                print('The number of coins left is {}'.format(env.env.return_coins()))
+                if env.env.return_coins() == 0:
+                    print('Too many coins taken')
                     done = True
+
+                    env.stats_recorder.done = True
                 else:
                     env.env.reset_clean(env.env.mario.rect.y)
 
@@ -466,7 +474,7 @@ def deep_q_learning(sess,
 tf.reset_default_graph()
 
 # Where we save our checkpoints and graphs
-experiment_dir = os.path.abspath("./experiments/{}".format('mario_version_LR _run2'))
+experiment_dir = os.path.abspath("./experiments/{}".format('mario_version_LR_run4'))
 
 # Create a glboal step variable
 global_step = tf.Variable(0, name='global_step', trainable=False)
