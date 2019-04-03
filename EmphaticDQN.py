@@ -219,7 +219,7 @@ def deep_q_learning(sess,
                     discount_factor=0.99,
                     epsilon_start=1.0,
                     epsilon_end=0.1,
-                    epsilon_decay_steps=500000,
+                    epsilon_decay_steps=1500000,
                     batch_size=32,
                     record_video_every=50,
                     selfishness=0.5):
@@ -495,7 +495,7 @@ with tf.Session() as sess:
                                     update_target_estimator_every=10000,
                                     epsilon_start=1.0,
                                     epsilon_end=0.1,
-                                    epsilon_decay_steps=500000,
+                                    epsilon_decay_steps=1500000,
                                     discount_factor=0.99,
                                     batch_size=32,
                                     selfishness=1.0):
