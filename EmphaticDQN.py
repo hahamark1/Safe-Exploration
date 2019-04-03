@@ -309,11 +309,11 @@ def deep_q_learning(sess,
         action = np.random.choice(np.arange(len(action_probs)), p=action_probs)
 
         next_total_state, reward, done, info = env.step(VALID_ACTIONS[action])
-        if env.mario.rect.x > MAP_MULTIPLIER * env.level.levelLength:
-            if env.return_coins() == 0:
-                done = True
-            else:
-                env.reset_clean(env.mario.rect.y)
+        # if env.mario.rect.x > MAP_MULTIPLIER * env.level.levelLength:
+        #     if env.return_coins() == 0:
+        #         done = True
+        #     else:
+            env.reset_clean(env.mario.rect.y)
 
         next_state = state_processor.process(sess, next_total_state, 1)
         next_state = np.append(state[:,:,1:], np.expand_dims(next_state, 2), axis=2)
@@ -387,11 +387,11 @@ def deep_q_learning(sess,
             action = np.random.choice(np.arange(len(action_probs)), p=action_probs)
             next_total_state, reward, done, info = env.step(VALID_ACTIONS[action])
             if env.env.mario.rect.x > MAP_MULTIPLIER * env.env.level.levelLength:
-                if env.env.return_coins() == 0:
-                    done = True
-                    env.stats_recorder.done = True
-                else:
-                    env.env.reset_clean(env.env.mario.rect.y)
+                # if env.env.return_coins() == 0:
+                #     done = True
+                #     env.stats_recorder.done = True
+                # else:
+                env.env.reset_clean(env.env.mario.rect.y)
 
             next_state = state_processor.process(sess, next_total_state, 1)
             next_state = np.append(state[:, :, 1:], np.expand_dims(next_state, 2), axis=2)
@@ -469,7 +469,7 @@ def deep_q_learning(sess,
 tf.reset_default_graph()
 
 # Where we save our checkpoints and graphs
-experiment_dir = os.path.abspath("./experiments/{}".format('mario_version_LR_run4'))
+experiment_dir = os.path.abspath("./experiments/{}".format('mario_version_LR_run3'))
 
 # Create a glboal step variable
 global_step = tf.Variable(0, name='global_step', trainable=False)
