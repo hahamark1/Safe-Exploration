@@ -60,6 +60,7 @@ class MarioGym(gym.Env):
 
         self.level_name = 'Level-{}-coins.json'.format(self.no_coins)
 
+
         if not self.headless:
             self.dashboard = Dashboard("./img/font.png", 8, self.screen, coins=0, points=0, time=0)
             self.level = Level(self.screen, self.sound, self.dashboard, self.levelname)

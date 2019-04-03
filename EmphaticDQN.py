@@ -309,7 +309,7 @@ def deep_q_learning(sess,
         action = np.random.choice(np.arange(len(action_probs)), p=action_probs)
 
         next_total_state, reward, done, info = env.step(VALID_ACTIONS[action])
-        # if env.mario.rect.x > MAP_MULTIPLIER * env.level.levelLength:
+        if env.mario.rect.x > MAP_MULTIPLIER * env.level.levelLength:
         #     if env.return_coins() == 0:
         #         done = True
         #     else:
