@@ -91,9 +91,9 @@ class MarioGym(gym.Env):
 
         coins_taken = coins - len([x for x in self.level.entityList if ((x.__class__.__name__ == 'Coin'))])
         self.observation = self.level_to_empathic_numpy()
-
+        # print(coins_taken)
         info = {'num_killed': goombas_died,
-                'coins_taken': coins_taken}
+                'coins_taken': reward/100}
 
         # restart = (self.return_coins() == 0 or self.steps >= 2000)
         restart = self.mario.restart or self.steps >= 2000
