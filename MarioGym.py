@@ -55,7 +55,8 @@ class MarioGym(gym.Env):
         self.init_game(y_position=y_pos)
         self.coins_taken = self.coins_start - self.no_coins
 
-        self.no_coins = min(5, self.no_coins * 2)
+
+        self.no_coins = min(5, self.no_coins * 2)-1
         self.coins_start = self.no_coins
 
         self.levelname = 'Level-{}-coins.json'.format(self.no_coins)
