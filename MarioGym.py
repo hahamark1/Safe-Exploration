@@ -58,8 +58,7 @@ class MarioGym(gym.Env):
         self.no_coins = min(5, self.no_coins * 2)
         self.coins_start = self.no_coins
 
-        self.level_name = 'Level-{}-coins.json'.format(self.no_coins)
-
+        self.levelname = 'Level-{}-coins.json'.format(self.no_coins)
 
         if not self.headless:
             self.dashboard = Dashboard("./img/font.png", 8, self.screen, coins=0, points=0, time=0)
