@@ -52,20 +52,20 @@ class MarioGym(gym.Env):
         return self.observation
 
     def reset_clean(self, y_pos):
-        self.init_game(y_position=y_pos)
         self.coins_taken = self.coins_start - self.no_coins
-
-
-        self.no_coins = min(5, self.no_coins * 2)-1
+        self.no_coins = min(5, self.no_coins * 2) - 1
         self.coins_start = self.no_coins
 
         self.levelname = 'Level-{}-coins.json'.format(self.no_coins)
 
-        if not self.headless:
-            self.dashboard = Dashboard("./img/font.png", 8, self.screen, coins=0, points=0, time=0)
-            self.level = Level(self.screen, self.sound, self.dashboard, self.levelname)
-        else:
-            self.level = LevelHeadless(self.levelname)
+
+        self.init_game(y_position=y_pos, clock=self.clock)
+
+        # if not self.headless:
+        #     self.dashboard = Dashboard("./img/font.png", 8, self.screen, coins=0, points=0, time=0)
+        #     self.level = Level(self.screen, self.sound, self.dashboard, self.levelname)
+        # else:
+        #     self.level = LevelHeadless(self.levelname)
 
         self.observation = self.level_to_empathic_numpy()
 
@@ -103,7 +103,7 @@ class MarioGym(gym.Env):
     def render(self, mode='human', close=False):
         pass
 
-    def init_game(self, y_position=0, coins=0, points=0, time=0):
+    def init_game(self, y_position=0, coins=0, points=0, time=0, clock=0):
         if not self.headless:
             pygame.mixer.pre_init(44100, -16, 2, 4096)
             pygame.init()
@@ -125,7 +125,7 @@ class MarioGym(gym.Env):
         else:
             self.level = LevelHeadless(self.levelname)
             self.mario = MarioHeadless(0, 0, self.level)
-            self.clock = 0
+            self.clock = clock
 
     def do_game_step(self, move):
         if not self.headless:
