@@ -420,7 +420,7 @@ def deep_q_learning(sess,
             stats.episode_lengths[i_episode] = t
             stats.episode_kills[i_episode] += info['num_killed']
             stats.episode_coins[i_episode] += info['coins_taken']
-            stats.episode_levels[i_episode] += level_up + 1
+            stats.episode_levels[i_episode] += level_up
 
             # Sample a minibatch from the replay memory
             samples = random.sample(replay_memory, batch_size)
@@ -452,7 +452,7 @@ def deep_q_learning(sess,
 
             state = next_state
             total_t += 1
-
+        stats.episode_levels[i_episode] += 1
         # Add summaries to tensorboard
         episode_summary = tf.Summary()
         episode_summary.value.add(simple_value=stats.episode_rewards[i_episode], node_name="episode_reward", tag="episode_reward")
@@ -480,7 +480,7 @@ def deep_q_learning(sess,
 tf.reset_default_graph()
 
 # Where we save our checkpoints and graphs
-experiment_dir = os.path.abspath("./experiments/{}".format('limited_resources_correct_run_1.0'))
+experiment_dir = os.path.abspath("./experiments/{}".format('limited_resources_correct_run_1.1'))
 
 # Create a glboal step variable
 global_step = tf.Variable(0, name='global_step', trainable=False)
