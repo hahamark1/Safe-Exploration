@@ -399,7 +399,6 @@ def deep_q_learning(sess,
                 env.env.reset_clean(env.env.mario.rect.y)
                 # reward += 500
                 level_up +=1
-                print()
 
             next_state = state_processor.process(sess, next_total_state, 1)
             next_state = np.append(state[:, :, 1:], np.expand_dims(next_state, 2), axis=2)
@@ -421,7 +420,7 @@ def deep_q_learning(sess,
             stats.episode_lengths[i_episode] = t
             stats.episode_kills[i_episode] += info['num_killed']
             stats.episode_coins[i_episode] += info['coins_taken']
-            stats.episode_levels[i_episode] += level_up
+            stats.episode_levels[i_episode] += level_up + 1
 
             # Sample a minibatch from the replay memory
             samples = random.sample(replay_memory, batch_size)
@@ -481,7 +480,7 @@ def deep_q_learning(sess,
 tf.reset_default_graph()
 
 # Where we save our checkpoints and graphs
-experiment_dir = os.path.abspath("./experiments/{}".format('limited_resources_correct_run_1'))
+experiment_dir = os.path.abspath("./experiments/{}".format('limited_resources_correct_run_1.0'))
 
 # Create a glboal step variable
 global_step = tf.Variable(0, name='global_step', trainable=False)
