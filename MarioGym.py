@@ -23,7 +23,7 @@ MOVES = ['moveLeft', 'moveRight', 'jump', 'jumpLeft', 'jumpRight', 'doNothing']
 
 class MarioGym(gym.Env):
 
-    def __init__(self, headless=True, level_name='Level-basic-one-goomba.json', no_coins=0):
+    def __init__(self, headless=True, level_name='Level-basic-one-goomba.json', no_coins=5):
         self.action_space = spaces.Discrete(6)
         self.observation_space = spaces.Box(low=-10000000, high=100000000, dtype=np.float, shape=(40, 80, 4))
 
