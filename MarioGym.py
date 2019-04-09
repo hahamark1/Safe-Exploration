@@ -52,14 +52,18 @@ class MarioGym(gym.Env):
         return self.observation
 
     def reset_clean(self, y_pos):
+
+        self.count_entities()
         self.coins_taken = self.coins_start - self.no_coins
-        self.no_coins = min(5, self.no_coins * 2) - 1
+        self.coins_end = self.no_coins
+        # print('Number of coins left: {}'.format(self.no_coins))
+        self.no_coins = min(5, self.no_coins * 2)
         self.coins_start = self.no_coins
 
         self.levelname = 'Level-{}-coins.json'.format(self.no_coins)
 
 
-        self.init_game(y_position=y_pos, clock=self.clock)
+        self.init_game(y_position=y_pos, coins=self.coins_end, clock=self.clock)
 
         # if not self.headless:
         #     self.dashboard = Dashboard("./img/font.png", 8, self.screen, coins=0, points=0, time=0)
@@ -124,6 +128,7 @@ class MarioGym(gym.Env):
             pygame.display.update()
         else:
             self.level = LevelHeadless(self.levelname)
+            # print('We have reached a new level, we ended with {} coins and now have {} coins in the level!'.format(coins, self.levelname[6]))
             self.mario = MarioHeadless(0, 0, self.level)
             self.clock = clock
 

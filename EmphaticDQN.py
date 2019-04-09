@@ -312,9 +312,9 @@ def deep_q_learning(sess,
         next_total_state, reward, done, info = env.step(VALID_ACTIONS[action])
         level_up = 0
         if env.mario.rect.x > MAP_MULTIPLIER * env.level.levelLength:
-        #     if env.return_coins() == 0:
-        #         done = True
-        #     else:
+            # if env.return_coins() == 0:
+            #     done = True
+            # else:
             env.reset_clean(env.mario.rect.y)
             # reward += 500
             level_up += 1
@@ -480,7 +480,7 @@ def deep_q_learning(sess,
 tf.reset_default_graph()
 
 # Where we save our checkpoints and graphs
-experiment_dir = os.path.abspath("./experiments/{}".format('limited_resources_correct_run_1.1'))
+experiment_dir = os.path.abspath("./experiments/{}".format('limited_resources_correct_run_1.2'))
 
 # Create a glboal step variable
 global_step = tf.Variable(0, name='global_step', trainable=False)

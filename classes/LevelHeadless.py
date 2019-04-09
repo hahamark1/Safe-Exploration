@@ -31,17 +31,18 @@ class LevelHeadless():
             self.levelLength = data['length']
 
     def loadEntities(self, data):
-        for entity in data['level']['entities']:
-            for position in entity['positions']:
-                if entity['name'] == "Goomba":
-                    self.addGoomba(position[0], position[1])
-                elif entity['name'] == "Koopa":
-                    self.addKoopa(position[0], position[1])
-                elif entity['name'] == "coin":
-                    self.addCoin(position[0], position[1])
-                    # pass
-                elif entity['name'] == "randomBox":
-                    self.addRandomBox(position[0], position[1])
+        if 'entities' in data['level']:
+            for entity in data['level']['entities']:
+                for position in entity['positions']:
+                    if entity['name'] == "Goomba":
+                        self.addGoomba(position[0], position[1])
+                    elif entity['name'] == "Koopa":
+                        self.addKoopa(position[0], position[1])
+                    elif entity['name'] == "coin":
+                        self.addCoin(position[0], position[1])
+                        # pass
+                    elif entity['name'] == "randomBox":
+                        self.addRandomBox(position[0], position[1])
 
 
 
