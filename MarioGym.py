@@ -49,6 +49,7 @@ class MarioGym(gym.Env):
         self.init_game()
         self.steps = 0
         self.no_coins = 5
+        self.levelname = 'Level-{}-coins.json'.format(self.no_coins)
         self.observation = self.level_to_empathic_numpy()
         return self.observation
 
