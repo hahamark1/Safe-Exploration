@@ -48,6 +48,7 @@ class MarioGym(gym.Env):
     def reset(self):
         self.init_game()
         self.steps = 0
+        self.no_coins = 5
         self.observation = self.level_to_empathic_numpy()
         return self.observation
 
