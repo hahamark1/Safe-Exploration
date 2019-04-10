@@ -343,7 +343,7 @@ def deep_q_learning(sess,
 
     # Record videos
     # Use the gym env Monitor wrapper
-    env = MarioGym(headless=False, level_name='Level-5-coins.json', no_coins=5)
+    # env = MarioGym(headless=False, level_name='Level-5-coins.json', no_coins=5)
     env = Monitor(env,
                   directory=monitor_path,
                   resume=True,
