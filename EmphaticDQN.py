@@ -219,7 +219,7 @@ def deep_q_learning(sess,
                     discount_factor=0.99,
                     epsilon_start=1.0,
                     epsilon_end=0.1,
-                    epsilon_decay_steps=1500000,
+                    epsilon_decay_steps=500000,
                     batch_size=32,
                     record_video_every=50,
                     selfishness=0.5):
@@ -312,12 +312,12 @@ def deep_q_learning(sess,
         next_total_state, reward, done, info = env.step(VALID_ACTIONS[action])
         level_up = 0
         if env.mario.rect.x > MAP_MULTIPLIER * env.level.levelLength:
-            # if env.return_coins() == 0:
-            #     done = True
-            # else:
-            env.reset_clean(env.mario.rect.y)
-            # reward += 500
-            level_up += 1
+            if env.return_coins() == 0:
+                done = True
+            else:
+                env.reset_clean(env.mario.rect.y)
+                # reward += 500
+                level_up += 1
 
         next_state = state_processor.process(sess, next_total_state, 1)
         next_state = np.append(state[:,:,1:], np.expand_dims(next_state, 2), axis=2)
@@ -343,6 +343,7 @@ def deep_q_learning(sess,
 
     # Record videos
     # Use the gym env Monitor wrapper
+    env = MarioGym(headless=False, level_name='Level-5-coins.json', no_coins=5)
     env = Monitor(env,
                   directory=monitor_path,
                   resume=True,
@@ -392,13 +393,13 @@ def deep_q_learning(sess,
             next_total_state, reward, done, info = env.step(VALID_ACTIONS[action])
             level_up = 0
             if env.env.mario.rect.x > MAP_MULTIPLIER * env.env.level.levelLength:
-                # if env.env.return_coins() == 0:
-                #     done = True
-                #     env.stats_recorder.done = True
-                # else:
-                env.env.reset_clean(env.env.mario.rect.y)
-                # reward += 500
-                level_up +=1
+                if env.env.return_coins() == 0:
+                    done = True
+                    env.stats_recorder.done = True
+                else:
+                    env.env.reset_clean(env.env.mario.rect.y)
+                    # reward += 500
+                    level_up +=1
 
             next_state = state_processor.process(sess, next_total_state, 1)
             next_state = np.append(state[:, :, 1:], np.expand_dims(next_state, 2), axis=2)
@@ -480,7 +481,7 @@ def deep_q_learning(sess,
 tf.reset_default_graph()
 
 # Where we save our checkpoints and graphs
-experiment_dir = os.path.abspath("./experiments/{}".format('limited_resources_correct_run_1.4'))
+experiment_dir = os.path.abspath("./experiments/{}".format('limited_resources_correct_run_1.5'))
 
 # Create a glboal step variable
 global_step = tf.Variable(0, name='global_step', trainable=False)
@@ -506,7 +507,7 @@ with tf.Session() as sess:
                                     update_target_estimator_every=10000,
                                     epsilon_start=1.0,
                                     epsilon_end=0.1,
-                                    epsilon_decay_steps=1500000,
+                                    epsilon_decay_steps=500000,
                                     discount_factor=0.99,
                                     batch_size=32,
                                     selfishness=1.0):
