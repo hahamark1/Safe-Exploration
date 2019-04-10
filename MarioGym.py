@@ -127,7 +127,7 @@ class MarioGym(gym.Env):
 
             pygame.display.update()
         else:
-            print('Initialized a level with {} coins'.format(self.no_coins))
+            print('Initialized a level with {} coins under the name: {}'.format(self.no_coins, self.levelname))
             self.level = LevelHeadless(self.levelname)
             # print('We have reached a new level, we ended with {} coins and now have {} coins in the level!'.format(coins, self.levelname[6]))
             self.mario = MarioHeadless(0, 0, self.level)
