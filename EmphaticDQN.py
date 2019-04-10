@@ -395,6 +395,7 @@ def deep_q_learning(sess,
             if env.env.mario.rect.x > MAP_MULTIPLIER * env.env.level.levelLength:
                 if env.env.return_coins() == 0:
                     done = True
+                    print('No coins left')
                     env.stats_recorder.done = True
                 else:
                     env.env.reset_clean(env.env.mario.rect.y)
