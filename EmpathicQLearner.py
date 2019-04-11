@@ -10,7 +10,6 @@ from datetime import datetime
 
 from GridworldGym import GridworldGym
 
-env = GridworldGym()
 
 class EmphaticQLearner():
 
@@ -20,10 +19,18 @@ class EmphaticQLearner():
         self.epsilon = 0.99
         self.learning_rate = 0.05
         self.future_discount = 0.99
-        self.selfishness = 0.5
-        self.writer = tf.summary.FileWriter(f'logs/EQLearning3.0/{str(datetime.now())}/selfishness_{self.selfishness}')
+        self.selfishness = 0.1
+        self.step_reward = 1
+        self.dead_reward = -1000
+        self.kill_reward = 1000
+        self.max_steps = 400
+        self.writer = tf.summary.FileWriter(f'logs/version_1.1/maxsteps_{self.max_steps}/step_reward_{self.step_reward}/dead_reward_{self.dead_reward}/kill_reward_{self.kill_reward}/selfishness_{self.selfishness}/{str(datetime.now())}/')
         self.step = 0
         self.log_q_values=[[]]
+        self.env = GridworldGym(step_reward=self.step_reward,
+                                dead_reward=self.dead_reward,
+                                kill_reward=self.kill_reward,
+                                max_steps=self.max_steps)
 
         for i in range(10000000):
             self.step += 1
@@ -76,6 +83,7 @@ class EmphaticQLearner():
                 pickle.dump(self.Q_values, handle, protocol=pickle.HIGHEST_PROTOCOL)
                 self.rewards = [0]
                 self.enemies_killed = [0]
+                self.got_killed = [0]
         else:
             with open('Q_values.pickle', 'rb') as handle:
                 self.Q_values = pickle.load(handle)
@@ -86,22 +94,25 @@ class EmphaticQLearner():
 
     def do_game_step(self, move):
 
-        next_total_state, reward, done, info = env.step(move)
+        next_total_state, reward, done, info = self.env.step(move)
         if done:
-            env.reset()
+            self.env.reset()
             self.log_scalar('reward', self.rewards[-1], self.step)
-            self.log_scalar('kills', self.enemies_killed[-1], self.step)
+            self.log_scalar('killed_enemies', self.enemies_killed[-1], self.step)
+            self.log_scalar('got_killed', self.got_killed[-1], self.step)
+            self.log_scalar('both_survived', (not self.got_killed[-1] and not self.enemies_killed[-1]), self.step)
             self.log_scalar('epsilon', self.epsilon, self.step)
             self.log_scalar('mean_q', np.mean(self.log_q_values[-1]), self.step)
             self.log_histogram('q_values', np.array(self.log_q_values[-1]), self.step, 20)
             self.rewards.append(0)
             self.enemies_killed.append(0)
+            self.got_killed.append(0)
             self.log_q_values.append([])
 
         return reward, done, info
 
     def level_to_key(self):
-        obs = env.get_observation()
+        obs = self.env.get_observation()
         obs1 = tuple(map(tuple, obs[:, :, 0]))
         obs2 = tuple(map(tuple, obs[:, :, 1]))
         return obs1, obs2
@@ -142,6 +153,7 @@ class EmphaticQLearner():
 
         self.rewards[-1] += reward
         self.enemies_killed[-1] += info['num_killed']
+        self.got_killed[-1] += info['got_killed']
         self.log_q_values[-1].append(max_Q)
         print(f'average reward: {np.mean(self.rewards)},    epsilon: {self.epsilon}')
 

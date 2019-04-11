@@ -5,6 +5,7 @@ import numpy as np
 import os
 import random
 import sys
+from datetime import datetime
 
 from MarioGym import MarioGym
 import tensorflow as tf
@@ -15,7 +16,6 @@ if "../" not in sys.path:
 from lib import plotting
 from collections import deque, namedtuple
 
-env = MarioGym(headless=True)
 
 # Atari Actions: 0 (noop), 1 (fire), 2 (left) and 3 (right) are valid actions
 VALID_ACTIONS = [0, 1, 2, 3,4 ,5 ]
@@ -446,10 +446,16 @@ def deep_q_learning(sess,
     return stats
 
 
+step_reward = 1
+dead_reward = -400
+kill_reward = -800
+max_steps = 400
+selfishness = 1.0
+
 tf.reset_default_graph()
 
 # Where we save our checkpoints and graphs
-experiment_dir = os.path.abspath("./experiments/{}".format('mario_version1.2_self0.8_run1'))
+experiment_dir = os.path.abspath(f"experiments/version_2.0/maxsteps_{max_steps}/step_reward_{step_reward}/dead_reward_{dead_reward}/kill_reward_{kill_reward}/selfishness_{selfishness}/{str(datetime.now())}/")
 
 # Create a glboal step variable
 global_step = tf.Variable(0, name='global_step', trainable=False)
@@ -460,6 +466,10 @@ target_estimator = Estimator(scope="target_q")
 
 # State processor
 state_processor = StateProcessor()
+
+
+
+env = MarioGym(headless=True, step_reward=step_reward, dead_reward=dead_reward, kill_reward=kill_reward, max_steps=max_steps)
 
 with tf.Session() as sess:
     sess.run(tf.global_variables_initializer())
@@ -478,6 +488,6 @@ with tf.Session() as sess:
                                     epsilon_decay_steps=500000,
                                     discount_factor=0.99,
                                     batch_size=32,
-                                    selfishness=0.8):
+                                    selfishness=selfishness):
 
         print("\nEpisode Reward: {}".format(stats.episode_rewards[-1]))

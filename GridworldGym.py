@@ -9,24 +9,27 @@ from gym import spaces
 from gym.utils import seeding
 
 MOVES = ['moveLeft', 'moveRight', 'moveUp', 'moveDown']
-PLOT = False
-GRIDWORLD_SIZE = 11
-MAX_STEPS = 400
+
 
 class GridworldGym(gym.Env):
 
-    def __init__(self, headless=True):
+    def __init__(self, headless=True, gridworld_size=11, max_steps=400, kill_reward=0, step_reward=1, dead_reward=0):
         self.action_space = spaces.Discrete(4)
         self.observation_space = spaces.Box(low=-10000000, high=100000000, dtype=np.float, shape=(7, 7, 2))
         plt.ion()
+        self.headless = headless
+        self.gridworld_size = gridworld_size
+        self.max_steps = max_steps
+        self.kill_reward = kill_reward
+        self.step_reward = step_reward
+        self.dead_reward = dead_reward
 
         self.reset()
 
     def reset(self):
 
         self.agent_position = [6, 6]
-        #self.enemy_positions = [[x, y] for x in range(5, 40, 5) for y in range(5, 40, 5)]
-        #self.enemy_positions = [[1,GRIDWORLD_SIZE],[GRIDWORLD_SIZE,1], [1,1], [GRIDWORLD_SIZE,GRIDWORLD_SIZE]]
+
         self.enemy_positions = [[0,0]]
         self.steps = 0
         self.get_observation()
@@ -34,13 +37,13 @@ class GridworldGym(gym.Env):
         return self.observation
 
     def get_observation(self):
-        self.observation = np.zeros((GRIDWORLD_SIZE, GRIDWORLD_SIZE))
+        self.observation = np.zeros((self.gridworld_size, self.gridworld_size))
 
-        self.observation[max(0, min(self.agent_position[0], GRIDWORLD_SIZE-1)), max(0, min(self.agent_position[1], GRIDWORLD_SIZE-1))] = 1
+        self.observation[max(0, min(self.agent_position[0], self.gridworld_size-1)), max(0, min(self.agent_position[1], self.gridworld_size-1))] = 1
         closest_enemy = None
         closest_distance = np.inf
         for pos in self.enemy_positions:
-            self.observation[max(0, min(pos[0], GRIDWORLD_SIZE-1)), max(0, min(pos[1], GRIDWORLD_SIZE-1))] = -1
+            self.observation[max(0, min(pos[0], self.gridworld_size-1)), max(0, min(pos[1], self.gridworld_size-1))] = -1
             distance = np.linalg.norm(np.array(pos)-np.array(self.agent_position))
             if distance < closest_distance:
                 closest_distance = distance
@@ -71,12 +74,12 @@ class GridworldGym(gym.Env):
     def plot_env(self):
         self.observation = self.get_observation()
 
-        env = np.zeros((GRIDWORLD_SIZE, GRIDWORLD_SIZE))
+        env = np.zeros((self.gridworld_size, self.gridworld_size))
 
-        env[max(0, min(self.agent_position[0], GRIDWORLD_SIZE-1)), max(0, min(self.agent_position[1], GRIDWORLD_SIZE-1))] = 1
+        env[max(0, min(self.agent_position[0], self.gridworld_size-1)), max(0, min(self.agent_position[1], self.gridworld_size-1))] = 1
         for pos in self.enemy_positions:
-            env[max(0, min(pos[0], GRIDWORLD_SIZE-1)), max(0, min(pos[1], GRIDWORLD_SIZE-1))] = -1
-        if PLOT:
+            env[max(0, min(pos[0], self.gridworld_size-1)), max(0, min(pos[1], self.gridworld_size-1))] = -1
+        if not self.headless:
             plt.matshow(self.observation[:,:,0], 1)
             plt.draw()
             plt.pause(0.1)
@@ -91,52 +94,51 @@ class GridworldGym(gym.Env):
         self.steps += 1
 
         #update agents
-        restart = (self.agent_position in [[x[0] +1, x[1]] for x in self.enemy_positions]) or (self.agent_position in [[x[0], x[1] +1] for x in self.enemy_positions])
+        dead = (self.agent_position in [[x[0] +1, x[1]] for x in self.enemy_positions]) or (self.agent_position in [[x[0], x[1] +1] for x in self.enemy_positions])
         num_enemies_killed = self.kill_enemies()
 
-        if not restart and self.steps % 2 == 0:
+        if not dead and self.steps % 2 == 0:
 
             #move agent
             if action_num == 0:
-                self.agent_position = [(self.agent_position[0] + 1) % GRIDWORLD_SIZE, self.agent_position[1]]
+                self.agent_position = [(self.agent_position[0] + 1) % self.gridworld_size, self.agent_position[1]]
             elif action_num == 1:
-                self.agent_position = [(self.agent_position[0] - 1) % GRIDWORLD_SIZE, self.agent_position[1]]
+                self.agent_position = [(self.agent_position[0] - 1) % self.gridworld_size, self.agent_position[1]]
             elif action_num == 2:
-                self.agent_position = [self.agent_position[0], (self.agent_position[1] + 1) % GRIDWORLD_SIZE]
+                self.agent_position = [self.agent_position[0], (self.agent_position[1] + 1) % self.gridworld_size]
             elif action_num == 3:
-                self.agent_position = [self.agent_position[0], (self.agent_position[1] - 1) % GRIDWORLD_SIZE]
+                self.agent_position = [self.agent_position[0], (self.agent_position[1] - 1) % self.gridworld_size]
 
-            if PLOT:
+            if not self.headless:
                 self.plot_env()
 
-        elif not restart:
+        elif not dead:
             #move enemies
             for i, pos in enumerate(self.enemy_positions):
                 action = np.random.choice(range(4))
                 if action == 0:
-                    pos = [(pos[0] + 1) % GRIDWORLD_SIZE, pos[1]]
+                    pos = [(pos[0] + 1) % self.gridworld_size, pos[1]]
                 elif action == 1:
-                    pos = [(pos[0] - 1) % GRIDWORLD_SIZE, pos[1]]
+                    pos = [(pos[0] - 1) % self.gridworld_size, pos[1]]
                 elif action == 2:
-                    pos = [pos[0], (pos[1] + 1) % GRIDWORLD_SIZE]
+                    pos = [pos[0], (pos[1] + 1) % self.gridworld_size]
                 elif action == 3:
-                    pos = [pos[0], (pos[1] - 1) % GRIDWORLD_SIZE]
+                    pos = [pos[0], (pos[1] - 1) % self.gridworld_size]
                 self.enemy_positions[i] = pos
 
-            if PLOT:
+            if not self.headless:
                 self.plot_env()
                 a=1
 
-
-        if restart:
+        if dead:
             self.reset()
-            if PLOT:
+            if not self.headless:
                 plt.pause(3.0)
 
-        reward = 1
-        info = {'num_killed': num_enemies_killed}
+        reward = self.step_reward + self.kill_reward*num_enemies_killed + self.dead_reward*dead
+        info = {'num_killed': num_enemies_killed, 'got_killed': dead}
 
-        restart = restart or self.steps > MAX_STEPS
+        restart = dead or self.steps > self.max_steps
 
         self.observation = self.get_observation()
 

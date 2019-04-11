@@ -20,10 +20,13 @@ MOVES = ['moveLeft', 'moveRight', 'jump', 'jumpLeft', 'jumpRight', 'doNothing']
 
 class MarioGym(gym.Env):
 
-    def __init__(self, headless=True):
+    def __init__(self, headless=True, step_reward=1, dead_reward=0, kill_reward=0, max_steps=400):
         self.action_space = spaces.Discrete(6)
         self.observation_space = spaces.Box(low=-10000000, high=100000000, dtype=np.float, shape=(40, 80, 4))
-
+        self.step_reward=step_reward
+        self.dead_reward=dead_reward
+        self.kill_reward=kill_reward
+        self.max_steps=max_steps
         self.levelname = 'Level-basic-one-goomba.json'
         self.headless = headless
         self.score = 0
@@ -64,8 +67,9 @@ class MarioGym(gym.Env):
 
         info = {'num_killed': goombas_died}
 
+        reward += goombas_died*self.kill_reward + self.mario.restart*self.dead_reward + self.step_reward
 
-        restart = self.mario.restart or self.steps >= 500
+        restart = self.mario.restart or self.steps >= self.max_steps
 
         return self.observation, reward, restart, info
 
@@ -129,7 +133,7 @@ class MarioGym(gym.Env):
             # plt.clf()
 
             #reward = 0.001 * (self.score - start_score + deadbonus)
-            reward = 1
+            reward = 0
 
         return reward
 
@@ -258,7 +262,7 @@ if __name__ == "__main__":
         if env.mario.restart:
             env.reset()
         else:
-            env.do_game_step(np.random.choice(MOVES))
+            env.do_game_step('jumpRight')
             env.observation = env.level_to_empathic_numpy()
 
 
