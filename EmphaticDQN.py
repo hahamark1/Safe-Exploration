@@ -343,7 +343,7 @@ def deep_q_learning(sess,
 
     # Record videos
     # Use the gym env Monitor wrapper
-    # env = MarioGym(headless=False, level_name='Level-5-coins.json', no_coins=5)
+    env = MarioGym(headless=False, level_name='Level-5-coins.json', no_coins=5)
     env = Monitor(env,
                   directory=monitor_path,
                   resume=True,
@@ -400,6 +400,7 @@ def deep_q_learning(sess,
                 else:
                     env.env.reset_clean(env.env.mario.rect.y)
                     reward += 50
+                    print('\nYou got a level up!')
                     level_up +=1
 
             next_state = state_processor.process(sess, next_total_state, 1)
@@ -482,7 +483,7 @@ def deep_q_learning(sess,
 tf.reset_default_graph()
 
 # Where we save our checkpoints and graphs
-experiment_dir = os.path.abspath("./experiments/{}".format('limited_resources_correct_run_1.7'))
+experiment_dir = os.path.abspath("./experiments/{}".format('limited_resources_correct_run_1.8'))
 
 # Create a glboal step variable
 global_step = tf.Variable(0, name='global_step', trainable=False)
