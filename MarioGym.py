@@ -19,7 +19,7 @@ import matplotlib.pyplot as plt
 from gym.utils import seeding
 
 MOVES = ['moveLeft', 'moveRight', 'jump', 'jumpLeft', 'jumpRight', 'doNothing']
-
+MAP_MULTIPLIER = 30.9
 
 class MarioGym(gym.Env):
 
@@ -164,7 +164,11 @@ class MarioGym(gym.Env):
 
 
             #reward = 0.001 * (self.score - start_score + deadbonus)
+
             reward += coins - self.return_coins()
+        # print('The current reward is: {}'.format(reward))
+        # print('The extra bonus is: {}'.format(self.mario.rect.x/MAP_MULTIPLIER))
+        reward += self.mario.rect.x/(10 * MAP_MULTIPLIER)
             # if reward > 0:
                 # print('He found a coin!!!')
                 # print(reward)

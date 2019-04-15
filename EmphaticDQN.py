@@ -6,7 +6,7 @@ import os
 import random
 import sys
 
-from MarioGym import MarioGym
+from MarioGym import MarioGym, MAP_MULTIPLIER
 import tensorflow as tf
 
 if "../" not in sys.path:
@@ -20,7 +20,7 @@ env = MarioGym(headless=True, level_name='Level-5-coins.json', no_coins=5)
 # Atari Actions: 0 (noop), 1 (fire), 2 (left) and 3 (rig)
 VALID_ACTIONS = [0, 1, 2, 3,4 ,5 ]
 WINDOW_LENGTH = 4
-MAP_MULTIPLIER = 30.9
+# MAP_MULTIPLIER = 30.9
 
 class StateProcessor():
     """
@@ -318,7 +318,6 @@ def deep_q_learning(sess,
                 env.reset_clean(env.mario.rect.y)
                 reward += 50
                 level_up += 1
-
         next_state = state_processor.process(sess, next_total_state, 1)
         next_state = np.append(state[:,:,1:], np.expand_dims(next_state, 2), axis=2)
 
@@ -347,7 +346,7 @@ def deep_q_learning(sess,
     env = Monitor(env,
                   directory=monitor_path,
                   resume=True,
-                  video_callable=lambda count: count % record_video_every ==0)
+                  video_callable=lambda count: count % record_video_every==0)
 
     for i_episode in range(num_episodes):
 
@@ -483,7 +482,7 @@ def deep_q_learning(sess,
 tf.reset_default_graph()
 
 # Where we save our checkpoints and graphs
-experiment_dir = os.path.abspath("./experiments/{}".format('limited_resources_correct_run_1.8'))
+experiment_dir = os.path.abspath("./experiments/{}".format('limited_resources_correct_run_1.9'))
 
 # Create a glboal step variable
 global_step = tf.Variable(0, name='global_step', trainable=False)
