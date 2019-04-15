@@ -87,7 +87,10 @@ class MarioGym(gym.Env):
         coins = len([x for x in self.level.entityList
                           if ((x.__class__.__name__ == 'Coin'))])
 
+        old_x_pos = self.mario.rect.x / (10 * MAP_MULTIPLIER)
+
         reward = self.do_game_step(action)
+        coins_taken = reward/100
 
         goombas_died = num_goombas - len([x for x in self.level.entityList
                           if ((x.__class__.__name__ == 'Goomba'
@@ -99,6 +102,10 @@ class MarioGym(gym.Env):
         # print(coins_taken)
         info = {'num_killed': goombas_died,
                 'coins_taken': reward/100}
+
+        new_x_pos = self.mario.rect.x / (10 * MAP_MULTIPLIER)
+
+        reward += max(0, new_x_pox - old_x_pos)
 
         # restart = (self.return_coins() == 0 or self.steps >= 2000)
         restart = self.mario.restart or self.steps >= 2000
@@ -168,7 +175,7 @@ class MarioGym(gym.Env):
             reward += coins - self.return_coins()
         # print('The current reward is: {}'.format(reward))
         # print('The extra bonus is: {}'.format(self.mario.rect.x/MAP_MULTIPLIER))
-        reward += self.mario.rect.x/(10 * MAP_MULTIPLIER)
+
             # if reward > 0:
                 # print('He found a coin!!!')
                 # print(reward)
