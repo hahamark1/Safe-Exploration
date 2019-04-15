@@ -312,12 +312,12 @@ def deep_q_learning(sess,
         next_total_state, reward, done, info = env.step(VALID_ACTIONS[action])
         level_up = 0
         if env.mario.rect.x > MAP_MULTIPLIER * env.level.levelLength:
-            if env.return_coins() == 0:
-                done = True
-            else:
-                env.reset_clean(env.mario.rect.y)
-                reward += 50
-                level_up += 1
+            # if env.return_coins() == 0:
+            #     done = True
+            # else:
+            env.reset_clean(env.mario.rect.y)
+            reward += 50
+            level_up += 1
         next_state = state_processor.process(sess, next_total_state, 1)
         next_state = np.append(state[:,:,1:], np.expand_dims(next_state, 2), axis=2)
 
@@ -392,15 +392,15 @@ def deep_q_learning(sess,
             next_total_state, reward, done, info = env.step(VALID_ACTIONS[action])
             level_up = 0
             if env.env.mario.rect.x > MAP_MULTIPLIER * env.env.level.levelLength:
-                if env.env.return_coins() == 0:
-                    done = True
-                    print('No coins left')
-                    env.stats_recorder.done = True
-                else:
-                    env.env.reset_clean(env.env.mario.rect.y)
-                    reward += 50
-                    print('\nYou got a level up!')
-                    level_up +=1
+                # if env.env.return_coins() == 0:
+                #     done = True
+                #     print('No coins left')
+                #     env.stats_recorder.done = True
+                # else:
+                env.env.reset_clean(env.env.mario.rect.y)
+                reward += 50
+                print('\nYou got a level up!')
+                level_up +=1
 
             next_state = state_processor.process(sess, next_total_state, 1)
             next_state = np.append(state[:, :, 1:], np.expand_dims(next_state, 2), axis=2)
@@ -482,7 +482,7 @@ def deep_q_learning(sess,
 tf.reset_default_graph()
 
 # Where we save our checkpoints and graphs
-experiment_dir = os.path.abspath("./experiments/{}".format('limited_resources_correct_run_1.9.1'))
+experiment_dir = os.path.abspath("./experiments/{}".format('limited_resources_correct_run_1.10'))
 
 # Create a glboal step variable
 global_step = tf.Variable(0, name='global_step', trainable=False)
