@@ -105,7 +105,7 @@ class MarioGym(gym.Env):
 
         new_x_pos = self.mario.rect.x / (10 * MAP_MULTIPLIER)
 
-        reward += max(0, new_x_pox - old_x_pos)
+        reward += max(0, new_x_pos - old_x_pos)
 
         # restart = (self.return_coins() == 0 or self.steps >= 2000)
         restart = self.mario.restart or self.steps >= 2000
