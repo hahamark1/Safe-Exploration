@@ -258,12 +258,19 @@ class MarioGym(gym.Env):
 if __name__ == "__main__":
     env = MarioGym(headless=False)
     plt.ion()
+    env.do_game_step('jumpRight')
+    env.do_game_step('jumpRight')
     while True:
-        if env.mario.restart:
-            env.reset()
-        else:
-            env.do_game_step('jumpRight')
-            env.observation = env.level_to_empathic_numpy()
+        print('jeej')
+        for i in range(80):
+            env.step(1)
+        for i in range(80):
+            env.step(0)
+    # while True:
+    #     if env.mario.restart:
+    #         env.reset()
+    #     else:
+    #         env.observation = env.level_to_empathic_numpy()
 
 
 
