@@ -17,15 +17,15 @@ class EmphaticQLearner():
         self.Q_values = {}
         self.load_pickles(load_q_values)
         self.epsilon = 0.99
-        self.learning_rate = 0.5
-        self.future_discount = 0.99
-        self.selfishness = 0.2
+        self.learning_rate = 0.10
+        self.future_discount = 0.9
+        self.selfishness = 0.6
         self.gridworld_size = 7
         self.step_reward = 1
         self.dead_reward = -1000
         self.kill_reward = 1000
         self.max_steps = 400000
-        self.writer = tf.summary.FileWriter(f'logs/coinsharing/version_2.1/gridworld_size_{self.gridworld_size}/maxsteps_{self.max_steps}/step_reward_{self.step_reward}/dead_reward_{self.dead_reward}/kill_reward_{self.kill_reward}/selfishness_{self.selfishness}/{str(datetime.now())}/')
+        self.writer = tf.summary.FileWriter(f'logs/coinsharing/version_3.4/gridworld_size_{self.gridworld_size}/maxsteps_{self.max_steps}/step_reward_{self.step_reward}/dead_reward_{self.dead_reward}/kill_reward_{self.kill_reward}/selfishness_{self.selfishness}/{str(datetime.now())}/')
         self.step = 0
         self.log_q_values=[[]]
         self.log_enemy_q_values = [[]]
@@ -37,8 +37,10 @@ class EmphaticQLearner():
 
         for i in range(10000000):
             self.step += 1
-            if self.epsilon > 0.1:
+            if self.epsilon > 0.01:
                 self.epsilon = self.epsilon * 0.999999
+                self.future_discount = (1 - self.epsilon)
+                self.learning_rate = self.epsilon
 
             self.Q_learning()
 
@@ -147,7 +149,7 @@ class EmphaticQLearner():
             if self.Q_values[level_key][action] >= max_Q:
                 max_Q = self.Q_values[level_key][action]
                 best_action = action
-        enemy_V = np.mean(list(self.Q_values[enemy_level_key].values()))
+        enemy_V = np.max(list(self.Q_values[enemy_level_key].values()))
         return best_action, max_Q, enemy_V
 
     def Q_learning(self):
@@ -161,7 +163,8 @@ class EmphaticQLearner():
             reward, done, info = self.do_game_step(action)
 
         _, new_Q, new_enemy_V = self.get_best_action()
-        value = self.selfishness * (1 - done) * (reward + self.future_discount * new_Q) + (1 - self.selfishness) * new_enemy_V
+        value = (1 - done) * (reward + self.selfishness * (self.future_discount * new_Q)) + \
+                             (1 - self.selfishness) * self.future_discount * new_enemy_V
         self.Q_values[state][action] = (1-self.learning_rate)*self.Q_values[state][action] + self.learning_rate*value
 
         self.rewards[-1] += reward
@@ -170,7 +173,7 @@ class EmphaticQLearner():
         self.enemy_coins_collected[-1] += info['enemy_coins_collected']
         self.got_killed[-1] += info['got_killed']
         self.log_q_values[-1].append(max_Q)
-        self.log_enemy_q_values[-1].append(new_enemy_V)
+        self.log_enemy_q_values[-1].append(enemy_V)
         print(f'average reward: {np.mean(self.rewards)},    epsilon: {self.epsilon}')
 
 

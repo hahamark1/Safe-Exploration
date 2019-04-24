@@ -18,7 +18,7 @@ from collections import deque, namedtuple
 
 
 # Atari Actions: 0 (noop), 1 (fire), 2 (left) and 3 (right) are valid actions
-VALID_ACTIONS = [0, 1, 2, 3,4 ,5 ]
+VALID_ACTIONS = [0, 1, 2, 3, 4, 5]
 WINDOW_LENGTH = 4
 
 class StateProcessor():
