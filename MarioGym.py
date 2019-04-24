@@ -18,6 +18,9 @@ from gym import spaces
 import matplotlib.pyplot as plt
 from gym.utils import seeding
 
+EPISODE_LENGTH = 800
+HOLE_REWARD = 5
+COIN_REWARD = 1
 MOVES = ['moveLeft', 'moveRight', 'jump', 'jumpLeft', 'jumpRight', 'doNothing']
 MAP_MULTIPLIER = 30.9
 
@@ -43,13 +46,16 @@ class MarioGym(gym.Env):
         self.coins_start = self.no_coins
 
         self.init_game()
-        self.reset()
+        self.reset(levelname = self.levelname)
 
-    def reset(self):
+    def reset(self, levelname=None):
+        if not levelname:
+            self.no_coins = 5
+            self.levelname = 'Level-{}-coins.json'.format(self.no_coins)
+        else:
+            self.levelname = levelname
         self.init_game()
         self.steps = 0
-        self.no_coins = 5
-        self.levelname = 'Level-{}-coins.json'.format(self.no_coins)
         self.observation = self.level_to_empathic_numpy()
         return self.observation
 
@@ -57,20 +63,11 @@ class MarioGym(gym.Env):
         self.count_entities()
         self.coins_taken = self.coins_start - self.no_coins
         self.coins_end = self.no_coins
-        print('Number of coins left: {}'.format(self.no_coins))
         self.no_coins = min(5, self.no_coins * 2)
         self.coins_start = self.no_coins
 
         self.levelname = 'Level-{}-coins.json'.format(self.no_coins)
-
-
         self.init_game(y_position=y_pos, coins=self.coins_end, clock=self.clock)
-
-        # if not self.headless:
-        #     self.dashboard = Dashboard("./img/font.png", 8, self.screen, coins=0, points=0, time=0)
-        #     self.level = Level(self.screen, self.sound, self.dashboard, self.levelname)
-        # else:
-        #     self.level = LevelHeadless(self.levelname)
 
         self.observation = self.level_to_empathic_numpy()
 
@@ -90,7 +87,7 @@ class MarioGym(gym.Env):
         old_x_pos = self.mario.rect.x / (10 * MAP_MULTIPLIER)
 
         reward = self.do_game_step(action)
-        coins_taken = reward/100
+        coins_taken = reward/COIN_REWARD
 
         goombas_died = num_goombas - len([x for x in self.level.entityList
                           if ((x.__class__.__name__ == 'Goomba'
@@ -101,15 +98,16 @@ class MarioGym(gym.Env):
         self.observation = self.level_to_empathic_numpy()
         # print(coins_taken)
         info = {'num_killed': goombas_died,
-                'coins_taken': reward/100}
+                'coins_taken': coins_taken,
+                'death': self.mario.restart}
 
-        new_x_pos = self.mario.rect.x / (10 * MAP_MULTIPLIER)
 
-        reward += max(0, new_x_pos - old_x_pos)
+        if self.mario.restart:
+            reward -= HOLE_REWARD
+        if coins_taken > 0:
+            self.mario.restart = True
 
-        # restart = (self.return_coins() == 0 or self.steps >= 2000)
-        restart = self.mario.restart or self.steps >= 2000
-        # print(reward)
+        restart = self.mario.restart or self.steps >= EPISODE_LENGTH
         return self.observation, reward, restart, info
 
     def render(self, mode='human', close=False):
@@ -135,9 +133,7 @@ class MarioGym(gym.Env):
 
             pygame.display.update()
         else:
-            print('Initialized a level with {} coins under the name: {}'.format(self.no_coins, self.levelname))
             self.level = LevelHeadless(self.levelname)
-            # print('We have reached a new level, we ended with {} coins and now have {} coins in the level!'.format(coins, self.levelname[6]))
             self.mario = MarioHeadless(0, 0, self.level)
             self.clock = clock
 
@@ -180,7 +176,7 @@ class MarioGym(gym.Env):
                 # print('He found a coin!!!')
                 # print(reward)
 
-        return 100 * reward
+        return COIN_REWARD * reward
 
     def level_to_numpy(self):
         granularity = 8

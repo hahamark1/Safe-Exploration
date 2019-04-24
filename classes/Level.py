@@ -25,9 +25,10 @@ class Level():
     def loadLevel(self, levelname):
         with open("./levels/{}".format(levelname)) as jsonData:
             data = json.load(jsonData)
+            self.loadEntities(data)
             self.loadLayers(data)
             self.loadObjects(data)
-            self.loadEntities(data)
+
             self.levelLength = data['length']
 
     def loadEntities(self, data):
@@ -44,34 +45,33 @@ class Level():
 
 
     def loadLayers(self, data):
-        levelx = []
-        levely = []
+        levely = {}
         for layer in data['level']['layers']:
             for y in range(layer['ranges']['y'][0], layer['ranges']['y'][1]):
-                levelx = []
+                if y not in levely:
+                    levely[y] = {}
+
                 for x in range(layer['ranges']['x'][0],
                                layer['ranges']['x'][1]):
                     if(layer['spritename'] == 'sky'):
-                        levelx.append(
-                            Tile(
+                        levely[y][x]=Tile(
                                 self.sprites.spriteCollection.get(
                                     layer['spritename']),
-                                None))
+                                None)
                     elif(layer['spritename'] == 'ground'):
-                        levelx.append(
-                            Tile(
+                        levely[y][x]=Tile(
                                 self.sprites.spriteCollection.get(
                                     layer['spritename']), pygame.Rect(
-                                    x * 32, (y - 1) * 32, 32, 32)))
+                                    x * 32, (y - 1) * 32, 32, 32))
                         self.groundList.append([x,y])
                     else:
-                        levelx.append(
-                            Tile(
-                                self.sprites.spriteCollection.get(
-                                    layer['spritename']), pygame.Rect(
-                                    x * 32, (y - 1) * 32, 32, 32)))
-                levely.append(levelx)
-        self.level = levely
+                        levely[y][x]=Tile(self.sprites.spriteCollection.get(
+                            layer['spritename']), pygame.Rect(
+                            x * 32, (y - 1) * 32, 32, 32))
+        # print(levely)
+        level_setup = [[levely[key2][key1] for key1 in sorted(levely[key2])] for key2 in sorted(levely)]
+
+        self.level = level_setup
 
     def loadObjects(self, data):
         for obj in data['level']['objects']:

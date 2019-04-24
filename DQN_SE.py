@@ -6,7 +6,7 @@ import os
 import random
 import sys
 
-from GridworldGym import GridworldGym
+from MarioGym import MarioGym, MAP_MULTIPLIER
 import tensorflow as tf
 
 if "../" not in sys.path:
@@ -15,11 +15,12 @@ if "../" not in sys.path:
 from lib import plotting
 from collections import deque, namedtuple
 
-env = GridworldGym()
+env = MarioGym(headless=True, level_name='Level-basic-one-hole.json')
 
-# Atari Actions: 0 (noop), 1 (fire), 2 (left) and 3 (right) are valid actions
-VALID_ACTIONS = [0, 1, 2, 3]
-WINDOW_LENGTH = 1
+# Atari Actions: 0 (noop), 1 (fire), 2 (left) and 3 (rig)
+VALID_ACTIONS = [0, 1, 2, 3,4 ,5 ]
+WINDOW_LENGTH = 4
+# MAP_MULTIPLIER = 30.9
 
 class StateProcessor():
     """
@@ -28,16 +29,17 @@ class StateProcessor():
     def __init__(self):
         # Build the Tensorflow graph
         with tf.variable_scope("state_processor"):
-            self.input_state = tf.placeholder(shape=[7, 7, 2], dtype=tf.uint8)
+            self.input_state = tf.placeholder(shape=[64, 64, 2], dtype=tf.uint8)
 
             self.output1 = tf.expand_dims(self.input_state[:,:,0], 2)
+
             self.output1 = tf.image.resize_images(
-                self.output1, [7, 7], method=tf.image.ResizeMethod.NEAREST_NEIGHBOR)
+                self.output1, [84, 84], method=tf.image.ResizeMethod.NEAREST_NEIGHBOR)
             self.output1 = tf.squeeze(self.output1)
 
             self.output2 = tf.expand_dims(self.input_state[:,:,1], 2)
             self.output2 = tf.image.resize_images(
-                self.output2, [7, 7], method=tf.image.ResizeMethod.NEAREST_NEIGHBOR)
+                self.output2, [84, 84], method=tf.image.ResizeMethod.NEAREST_NEIGHBOR)
             self.output2 = tf.squeeze(self.output2)
 
 
@@ -81,7 +83,7 @@ class Estimator():
 
         # Placeholders for our input
         # Our input are WINDOW_LENGTH RGB frames of shape 160, 160 each
-        self.X_pl = tf.placeholder(shape=[None, 7, 7, WINDOW_LENGTH], dtype=tf.uint8, name="X")
+        self.X_pl = tf.placeholder(shape=[None, 84, 84, WINDOW_LENGTH], dtype=tf.uint8, name="X")
         # The TD target value
         self.y_pl = tf.placeholder(shape=[None], dtype=tf.float32, name="y")
         # Integer id of which action was selected
@@ -91,14 +93,17 @@ class Estimator():
         batch_size = tf.shape(self.X_pl)[0]
 
 
+        # Three convolutional layers
         conv1 = tf.contrib.layers.conv2d(
-            X, 32, 3, 1, padding='same', activation_fn=tf.nn.relu)
+            X, 32, 8, 4, activation_fn=tf.nn.relu)
         conv2 = tf.contrib.layers.conv2d(
-            conv1, 32, 3, 1, padding='same', activation_fn=tf.nn.relu)
+            conv1, 64, 4, 2, activation_fn=tf.nn.relu)
+        conv3 = tf.contrib.layers.conv2d(
+            conv2, 64, 3, 1, activation_fn=tf.nn.relu)
 
         # Fully connected layers
-        flattened = tf.contrib.layers.flatten(conv2)
-        fc1 = tf.contrib.layers.fully_connected(flattened, 256, activation_fn=tf.nn.relu)
+        flattened = tf.contrib.layers.flatten(conv3)
+        fc1 = tf.contrib.layers.fully_connected(flattened, 512)
         self.predictions = tf.contrib.layers.fully_connected(fc1, len(VALID_ACTIONS))
 
         # Get the predictions for the chosen actions only
@@ -110,7 +115,7 @@ class Estimator():
         self.loss = tf.reduce_mean(self.losses)
 
         # Optimizer Parameters from original paper
-        self.optimizer = tf.train.RMSPropOptimizer(0.00025, 0.99, 0.0, 1e-6)
+        self.optimizer = tf.train.RMSPropOptimizer(0.025, 0.99, 0.0, 1e-6)
         self.train_op = self.optimizer.minimize(self.loss, global_step=tf.contrib.framework.get_global_step())
 
         # Summaries for Tensorboard
@@ -256,7 +261,10 @@ def deep_q_learning(sess,
     stats = plotting.EpisodeStats(
         episode_lengths=np.zeros(num_episodes),
         episode_rewards=np.zeros(num_episodes),
-        episode_kills=np.zeros(num_episodes))
+        episode_kills=np.zeros(num_episodes),
+        episode_coins=np.zeros(num_episodes),
+        episode_levels=np.zeros(num_episodes),
+        episode_total_death=np.zeros(num_episodes))
 
     # Create directories for checkpoints and summaries
     checkpoint_dir = os.path.join(experiment_dir, "checkpoints")
@@ -269,9 +277,10 @@ def deep_q_learning(sess,
         os.makedirs(monitor_path)
 
     saver = tf.train.Saver()
+    # print(latest_checkpoint)
     # Load a previous checkpoint if we find one
     latest_checkpoint = tf.train.latest_checkpoint(checkpoint_dir)
-    print(checkpoint_dir)
+
     if latest_checkpoint:
         print("Loading model checkpoint {}...\n".format(latest_checkpoint))
         saver.restore(sess, latest_checkpoint)
@@ -288,12 +297,13 @@ def deep_q_learning(sess,
 
     # Populate the replay memory with initial experience
     print("Populating replay memory...")
-    total_state = env.reset()
+    total_state = env.reset(levelname='Level-basic-one-hole.json')
     state = state_processor.process(sess, total_state, 1)
     enemy_state = state_processor.process(sess, total_state, 2)
 
     state = np.stack([state] * WINDOW_LENGTH, axis=2)
     enemy_state = np.stack([enemy_state] * WINDOW_LENGTH, axis=2)
+    total_death = 0
 
     total_state = np.stack([state, enemy_state], axis=2)
 
@@ -302,7 +312,7 @@ def deep_q_learning(sess,
         action = np.random.choice(np.arange(len(action_probs)), p=action_probs)
 
         next_total_state, reward, done, info = env.step(VALID_ACTIONS[action])
-
+        level_up = 0
         next_state = state_processor.process(sess, next_total_state, 1)
         next_state = np.append(state[:,:,1:], np.expand_dims(next_state, 2), axis=2)
 
@@ -314,7 +324,7 @@ def deep_q_learning(sess,
 
         replay_memory.append(Transition(total_state, action, reward, next_total_state, done))
         if done:
-            total_state = env.reset()
+            total_state = env.reset(levelname='Level-basic-one-hole.json')
             state = state_processor.process(sess, total_state, 1)
             enemy_state = state_processor.process(sess, total_state, 2)
 
@@ -327,10 +337,11 @@ def deep_q_learning(sess,
 
     # Record videos
     # Use the gym env Monitor wrapper
+    # env = MarioGym(headless=False, level_name='Level-5-coins.json', no_coins=5)
     env = Monitor(env,
                   directory=monitor_path,
                   resume=True,
-                  video_callable=lambda count: count % record_video_every ==0)
+                  video_callable=lambda count: count % record_video_every==0)
 
     for i_episode in range(num_episodes):
 
@@ -338,7 +349,7 @@ def deep_q_learning(sess,
         saver.save(tf.get_default_session(), checkpoint_path)
 
         # Reset the environment
-        total_state = env.reset()
+        total_state = env.reset(levelname='Level-basic-one-hole.json')
         state = state_processor.process(sess, total_state, 1)
         enemy_state = state_processor.process(sess, total_state, 2)
 
@@ -374,7 +385,7 @@ def deep_q_learning(sess,
             action_probs = policy(sess, state, epsilon)
             action = np.random.choice(np.arange(len(action_probs)), p=action_probs)
             next_total_state, reward, done, info = env.step(VALID_ACTIONS[action])
-
+            level_up = 0
             next_state = state_processor.process(sess, next_total_state, 1)
             next_state = np.append(state[:, :, 1:], np.expand_dims(next_state, 2), axis=2)
 
@@ -394,12 +405,16 @@ def deep_q_learning(sess,
             stats.episode_rewards[i_episode] += reward
             stats.episode_lengths[i_episode] = t
             stats.episode_kills[i_episode] += info['num_killed']
+            stats.episode_coins[i_episode] += info['coins_taken']
+            stats.episode_levels[i_episode] += level_up
+            if info['death']:
+                stats.episode_total_death[i_episode] += 1
 
             # Sample a minibatch from the replay memory
             samples = random.sample(replay_memory, batch_size)
             states_batch, action_batch, reward_batch, next_states_batch, done_batch = map(np.array, zip(*samples))
 
-            # Calculate q values and targets (Double DQN)
+            # Calculate q values and targets (Double DQN)coins_left
             q_values_next = q_estimator.predict(sess, next_states_batch[:,:,:,0,:])
             q_values_enemy_next = q_estimator.predict(sess, next_states_batch[:,:,:,1,:])
 
@@ -425,19 +440,30 @@ def deep_q_learning(sess,
 
             state = next_state
             total_t += 1
-
+        stats.episode_levels[i_episode] += 1
         # Add summaries to tensorboard
         episode_summary = tf.Summary()
         episode_summary.value.add(simple_value=stats.episode_rewards[i_episode], node_name="episode_reward", tag="episode_reward")
         episode_summary.value.add(simple_value=stats.episode_lengths[i_episode], node_name="episode_length", tag="episode_length")
         episode_summary.value.add(simple_value=stats.episode_kills[i_episode], node_name="episode_kills", tag="episode_kills")
+        episode_summary.value.add(simple_value=stats.episode_coins[i_episode], node_name="episode_coins",
+                                  tag="episode_coins")
+        episode_summary.value.add(simple_value=stats.episode_levels[i_episode], node_name="episode_levels",
+                                  tag="episode_levels")
+        episode_summary.value.add(simple_value=stats.episode_total_death[i_episode], node_name="episode_total_death",
+                                  tag="episode_total_death")
         q_estimator.summary_writer.add_summary(episode_summary, total_t)
         q_estimator.summary_writer.flush()
 
         yield total_t, plotting.EpisodeStats(
             episode_lengths=stats.episode_lengths[:i_episode+1],
             episode_rewards=stats.episode_rewards[:i_episode+1],
-            episode_kills=stats.episode_kills[:i_episode+1])
+            episode_kills=stats.episode_kills[:i_episode+1],
+            episode_coins=stats.episode_coins[:i_episode+1],
+            episode_levels=stats.episode_levels[:i_episode+1],
+            episode_total_death=stats.episode_total_death[:i_episode + 1]
+        )
+
 
     env.monitor.close()
     return stats
@@ -446,7 +472,7 @@ def deep_q_learning(sess,
 tf.reset_default_graph()
 
 # Where we save our checkpoints and graphs
-experiment_dir = os.path.abspath("./experiments/{}".format('gridworld11_self1.0_experiment2.1_run1'))
+experiment_dir = os.path.abspath("./experiments/{}".format('safe_exploration_1.0'))
 
 # Create a glboal step variable
 global_step = tf.Variable(0, name='global_step', trainable=False)
