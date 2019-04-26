@@ -333,6 +333,8 @@ def deep_q_learning(sess,
 
             total_state = np.stack([state, enemy_state], axis=2)
         else:
+            state = next_state
+            enemy_state = next_enemy_state
             total_state = next_total_state
 
     # Record videos
@@ -438,7 +440,9 @@ def deep_q_learning(sess,
             if done:
                 break
 
+            enemy_state = next_enemy_state
             state = next_state
+            total_state = next_total_state
             total_t += 1
         stats.episode_levels[i_episode] += 1
         # Add summaries to tensorboard
@@ -472,7 +476,7 @@ def deep_q_learning(sess,
 tf.reset_default_graph()
 
 # Where we save our checkpoints and graphs
-experiment_dir = os.path.abspath("./experiments/{}".format('safe_exploration_1.1'))
+experiment_dir = os.path.abspath("./experiments/{}".format('safe_exploration_1.2'))
 
 # Create a glboal step variable
 global_step = tf.Variable(0, name='global_step', trainable=False)
