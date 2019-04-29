@@ -23,6 +23,7 @@ WINDOW_LENGTH = 4
 IMAGE_SIZE = 128
 MAX_PIXEL = 255.0
 # MAP_MULTIPLIER = 30.9
+EXPERIMENT_NAME = 'safe_exploration_1.3'
 
 class StateProcessor():
     """
@@ -461,7 +462,7 @@ def deep_q_learning(sess,
 tf.reset_default_graph()
 
 # Where we save our checkpoints and graphs
-experiment_dir = os.path.abspath("./experiments/{}".format('safe_exploration_1.2'))
+experiment_dir = os.path.abspath("./experiments/{}".format(EXPERIMENT_NAME))
 
 # Create a glboal step variable
 global_step = tf.Variable(0, name='global_step', trainable=False)
