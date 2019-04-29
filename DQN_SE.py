@@ -25,7 +25,7 @@ WINDOW_LENGTH = 4
 IMAGE_SIZE = 128
 MAX_PIXEL = 255.0
 # MAP_MULTIPLIER = 30.9
-EXPERIMENT_NAME = 'safe_exploration_2.0'
+EXPERIMENT_NAME = 'safe_exploration_2.1'
 
 class StateProcessor():
     """
@@ -290,7 +290,8 @@ def deep_q_learning(sess,
         episode_kills=np.zeros(num_episodes),
         episode_coins=np.zeros(num_episodes),
         episode_levels=np.zeros(num_episodes),
-        episode_total_death=np.zeros(num_episodes))
+        episode_total_death=np.zeros(num_episodes),
+        episode_distance=np.zeros(num_episodes))
 
     # Create directories for checkpoints and summaries
     checkpoint_dir = os.path.join(experiment_dir, "checkpoints")
@@ -374,9 +375,14 @@ def deep_q_learning(sess,
         total_state = np.stack([state], axis=2)
 
         loss = None
+        dist = 0
 
         # One step in the environment
         for t in itertools.count():
+
+            if env.env.mario.rect.left > dist:
+                dist = env.env.mario.rect.left
+                # print('A new distance was foudn to be: {}\n'.format(dist))
 
             # Epsilon for this time step
             epsilon = epsilons[min(total_t, epsilon_decay_steps-1)]
@@ -419,6 +425,7 @@ def deep_q_learning(sess,
             stats.episode_kills[i_episode] += info['num_killed']
             stats.episode_coins[i_episode] += info['coins_taken']
             stats.episode_levels[i_episode] += level_up
+
             if info['death']:
                 stats.episode_total_death[i_episode] += 1
 
@@ -450,6 +457,7 @@ def deep_q_learning(sess,
             total_state = next_total_state
             total_t += 1
 
+        stats.episode_distance[i_episode] = dist
         stats.episode_levels[i_episode] += 1
 
         # Add summaries to tensorboard
@@ -463,6 +471,8 @@ def deep_q_learning(sess,
                                   tag="episode_levels")
         episode_summary.value.add(simple_value=stats.episode_total_death[i_episode], node_name="episode_total_death",
                                   tag="episode_total_death")
+        episode_summary.value.add(simple_value=stats.episode_distance[i_episode], node_name="episode_distance",
+                                  tag="episode_distance")
         q_estimator.summary_writer.add_summary(episode_summary, total_t)
         q_estimator.summary_writer.flush()
 
@@ -472,10 +482,9 @@ def deep_q_learning(sess,
             episode_kills=stats.episode_kills[:i_episode+1],
             episode_coins=stats.episode_coins[:i_episode+1],
             episode_levels=stats.episode_levels[:i_episode+1],
-            episode_total_death=stats.episode_total_death[:i_episode + 1]
+            episode_distance=stats.episode_distance[:i_episode+1],
+            episode_total_death=stats.episode_total_death[:i_episode+1]
         )
-
-
     env.monitor.close()
     return stats
 
