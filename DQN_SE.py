@@ -329,6 +329,7 @@ def deep_q_learning(sess,
             state = state_processor.process(sess, total_state, 1)
 
             state = np.stack([state] * WINDOW_LENGTH, axis=2)
+            total_state = np.stack([state], axis=2)
         else:
             state = next_state
             total_state = next_total_state
@@ -348,6 +349,7 @@ def deep_q_learning(sess,
 
         # Reset the environment
         total_state = env.reset(levelname='Level-basic-one-hole.json')
+
         state = state_processor.process(sess, total_state, 1)
         state = np.stack([state] * WINDOW_LENGTH, axis=2)
 
@@ -405,6 +407,7 @@ def deep_q_learning(sess,
             # Sample a minibatch from the replay memory
             samples = random.sample(replay_memory, batch_size)
             states_batch, action_batch, reward_batch, next_states_batch, done_batch = map(np.array, zip(*samples))
+            print(states_batch.shape)
 
             # Calculate q values and targets (Double DQN)coins_left
             q_values_next = q_estimator.predict(sess, next_states_batch[:,:,:,0,:])
