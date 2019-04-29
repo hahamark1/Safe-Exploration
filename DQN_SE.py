@@ -407,8 +407,6 @@ def deep_q_learning(sess,
             # Sample a minibatch from the replay memory
             samples = random.sample(replay_memory, batch_size)
             states_batch, action_batch, reward_batch, next_states_batch, done_batch = map(np.array, zip(*samples))
-            print(states_batch.shape)
-
             # Calculate q values and targets (Double DQN)coins_left
             q_values_next = q_estimator.predict(sess, next_states_batch[:,:,:,0,:])
 
