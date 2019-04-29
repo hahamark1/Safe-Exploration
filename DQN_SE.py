@@ -17,7 +17,7 @@ from collections import deque, namedtuple
 import matplotlib.pyplot as plt
 import numpy as np
 
-env = MarioGym(headless=True, level_name='Level-basic-one-hole.json')
+env = MarioGym(headless=False, level_name='Level-basic-one-hole.json')
 
 # Atari Actions: 0 (noop), 1 (fire), 2 (left) and 3 (rig)
 VALID_ACTIONS = [0, 1, 2, 3,4 ,5 ]
@@ -25,7 +25,7 @@ WINDOW_LENGTH = 4
 IMAGE_SIZE = 128
 MAX_PIXEL = 255.0
 # MAP_MULTIPLIER = 30.9
-EXPERIMENT_NAME = 'safe_exploration_2.1'
+EXPERIMENT_NAME = 'safe_exploration_2.2'
 
 class StateProcessor():
     """
