@@ -56,7 +56,7 @@ class MarioGym(gym.Env):
             self.levelname = levelname
         self.init_game()
         self.steps = 0
-        self.observation = self.level_to_empathic_numpy()
+        self.observation = self.level_to_numpy()
         return self.observation
 
     def reset_clean(self, y_pos):
@@ -69,7 +69,7 @@ class MarioGym(gym.Env):
         self.levelname = 'Level-{}-coins.json'.format(self.no_coins)
         self.init_game(y_position=y_pos, coins=self.coins_end, clock=self.clock)
 
-        self.observation = self.level_to_empathic_numpy()
+        self.observation = self.level_to_numpy()
 
         return self.observation
 
@@ -95,7 +95,7 @@ class MarioGym(gym.Env):
                               and x.alive)])
 
         coins_taken = coins - len([x for x in self.level.entityList if ((x.__class__.__name__ == 'Coin'))])
-        self.observation = self.level_to_empathic_numpy()
+        self.observation = self.level_to_numpy()
         # print(coins_taken)
         info = {'num_killed': goombas_died,
                 'coins_taken': coins_taken,
@@ -175,7 +175,6 @@ class MarioGym(gym.Env):
             # if reward > 0:
                 # print('He found a coin!!!')
                 # print(reward)
-
         return COIN_REWARD * reward
 
     def level_to_numpy(self):
@@ -185,28 +184,37 @@ class MarioGym(gym.Env):
         level_size = self.level.levelLength*padding
         array = np.zeros((level_size, level_size))
 
-        array[int(round(self.mario.rect.y/granularity))][int(round(self.mario.rect.x/granularity))] = -1
-        # for i, row in enumerate(self.level.level):
-        #     for j, ele in enumerate(row):
-        #         if ele.rect:
-        #             array[i][j] = 5
+        y_axis = int(round(self.mario.rect.y/granularity))
+        x_axis = int(round(self.mario.rect.x/granularity))
+        array[y_axis: y_axis + granularity, x_axis: x_axis + granularity] = -1
         for entity in self.level.entityList:
+            y_axis = int(round(entity.rect.y / granularity))
+            x_axis = int(round(entity.rect.x / granularity))
             if entity.__class__.__name__ == 'Koopa' or entity.__class__.__name__ == 'Goomba' or entity.__class__.__name__ == 'GoombaHeadless':
-                    array[int(round(entity.rect.y / granularity))][int(round(entity.rect.x / granularity))] = 1
-            elif entity.__class__.__name__ == 'Coin':
-                array[int(round(entity.rect.y / granularity))][int(round(entity.rect.x / granularity))] = 2
+                array[y_axis: y_axis + granularity, x_axis: x_axis + granularity] = 1
+            elif entity.__class__.__name__ == 'Coin' or entity.__class__.__name__ == 'CoindHeadless':
+                array[y_axis: y_axis + granularity, x_axis: x_axis + granularity] = 2
             elif entity.__class__.__name__ == 'RandomBox':
                 if not entity.triggered:
-                    array[int(round(entity.rect.y / granularity))][int(round(entity.rect.x / granularity))] = 3
+                    array[y_axis: y_axis + granularity, x_axis: x_axis + granularity] = 3
                 else:
-                    array[int(round(entity.rect.y / granularity))][int(round(entity.rect.x / granularity))] = 4
+                    array[y_axis: y_axis + granularity, x_axis: x_axis + granularity] = 4
         for ground in self.level.groundList:
-            array[int(round(32*ground[1] / granularity))][int(round(32*ground[0] / granularity))] = 5
+            y_axis = int(round(32*ground[1] / granularity))
+            x_axis = int(round(32*ground[0] / granularity))
+            array[y_axis: y_axis + granularity, x_axis: x_axis + granularity] = 5
 
-        array = np.hstack((np.zeros((level_size, padding)), array))
-        array = np.vstack((np.zeros((padding, level_size+padding)), array))
-        return array[max(0, int(round(self.mario.rect.y / granularity))): max(0,int(round(self.mario.rect.y / granularity))) + 2*padding, int(round(self.mario.rect.x / granularity)):int(round(self.mario.rect.x / granularity)) + 2 * padding]
+        # array_v2 = np.hstack((np.zeros((level_size, padding)), array))
+        # array_v2 = np.vstack((np.zeros((padding, level_size+padding)), array))
+        #
+        x1 = max(0, int(round(self.mario.rect.y / granularity)))
+        x2 = max(0, int(round(self.mario.rect.y / granularity))) + 2 * padding
+        x3 = int(round(self.mario.rect.x / granularity))
+        x4 = int(round(self.mario.rect.x / granularity)) + 2 * padding
 
+        numpy_frame = array[x1: x2, x3: x4]
+
+        return numpy_frame
 
     def count_entities(self, entity='coin'):
 
@@ -237,7 +245,6 @@ class MarioGym(gym.Env):
 
         mario_representation = 128
         ground_representaion = 64
-        enemy_representation = 255
         array[mario_pos[0]][mario_pos[1]] = mario_representation
 
         closest_enemy = None

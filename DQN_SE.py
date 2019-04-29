@@ -14,6 +14,8 @@ if "../" not in sys.path:
 
 from lib import plotting
 from collections import deque, namedtuple
+import matplotlib.pyplot as plt
+import numpy as np
 
 env = MarioGym(headless=True, level_name='Level-basic-one-hole.json')
 
@@ -23,7 +25,7 @@ WINDOW_LENGTH = 4
 IMAGE_SIZE = 128
 MAX_PIXEL = 255.0
 # MAP_MULTIPLIER = 30.9
-EXPERIMENT_NAME = 'safe_exploration_1.3'
+EXPERIMENT_NAME = 'safe_exploration_2.0'
 
 class StateProcessor():
     """
@@ -32,18 +34,18 @@ class StateProcessor():
     def __init__(self):
         # Build the Tensorflow graph
         with tf.variable_scope("state_processor"):
-            self.input_state = tf.placeholder(shape=[64, 64, 2], dtype=tf.uint8)
+            self.input_state = tf.placeholder(shape=[64, 64], dtype=tf.uint8)
 
-            self.output1 = tf.expand_dims(self.input_state[:,:,0], 2)
+            self.output1 = tf.expand_dims(self.input_state[:,:], 2)
 
             self.output1 = tf.image.resize_images(
                 self.output1, [IMAGE_SIZE, IMAGE_SIZE], method=tf.image.ResizeMethod.NEAREST_NEIGHBOR)
             self.output1 = tf.squeeze(self.output1)
 
-            self.output2 = tf.expand_dims(self.input_state[:,:,1], 2)
-            self.output2 = tf.image.resize_images(
-                self.output2, [IMAGE_SIZE, IMAGE_SIZE], method=tf.image.ResizeMethod.NEAREST_NEIGHBOR)
-            self.output2 = tf.squeeze(self.output2)
+            # self.output2 = tf.expand_dims(self.input_state[:,:,1], 2)
+            # self.output2 = tf.image.resize_images(
+            #     self.output2, [IMAGE_SIZE, IMAGE_SIZE], method=tf.image.ResizeMethod.NEAREST_NEIGHBOR)
+            # self.output2 = tf.squeeze(self.output2)
 
 
     def process(self, sess, state, output):
@@ -57,8 +59,8 @@ class StateProcessor():
         """
         if output == 1:
             return sess.run(self.output1, {self.input_state: state})
-        elif output == 2:
-            return sess.run(self.output2, {self.input_state: state})
+        # elif output == 2:
+        #     return sess.run(self.output2, {self.input_state: state})
 
 class Estimator():
     """Q-Value Estimator neural network.
@@ -146,7 +148,7 @@ class Estimator():
           Tensor of shape [batch_size, NUM_VALID_ACTIONS] containing the estimated
           action values.
         """
-        return sess.run(self.predictions, { self.X_pl: s })
+        return sess.run(self.predictions, { self.X_pl: s})
 
     def update(self, sess, s, a, y):
         """
@@ -212,6 +214,23 @@ def make_epsilon_greedy_policy(estimator, nA):
         return A
     return policy_fn
 
+
+def plot_layers(image):
+    plt.figure()
+
+    if len(image.shape) > 2:
+
+        place0 = image.shape[2] * 100
+        for i in range(image.shape[2]):
+            place = place0 + 11 + i
+
+
+            plt.subplot(place)
+            plt.imshow(image[:,:,i])
+        plt.show()
+    else:
+        plt.imshow(image)
+        plt.show()
 
 def deep_q_learning(sess,
                     env,
@@ -306,8 +325,9 @@ def deep_q_learning(sess,
     print("Populating replay memory...")
     total_state = env.reset(levelname='Level-basic-one-hole.json')
     state = state_processor.process(sess, total_state, 1)
-
     state = np.stack([state] * WINDOW_LENGTH, axis=2)
+
+    # state = np.stack([state] * WINDOW_LENGTH, axis=2)
     total_death = 0
 
     total_state = np.stack([state], axis=2)
@@ -349,10 +369,8 @@ def deep_q_learning(sess,
 
         # Reset the environment
         total_state = env.reset(levelname='Level-basic-one-hole.json')
-
         state = state_processor.process(sess, total_state, 1)
         state = np.stack([state] * WINDOW_LENGTH, axis=2)
-
         total_state = np.stack([state], axis=2)
 
         loss = None
@@ -427,9 +445,11 @@ def deep_q_learning(sess,
 
             if done:
                 break
+
             state = next_state
             total_state = next_total_state
             total_t += 1
+
         stats.episode_levels[i_episode] += 1
 
         # Add summaries to tensorboard
