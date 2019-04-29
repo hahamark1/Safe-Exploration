@@ -20,6 +20,8 @@ env = MarioGym(headless=True, level_name='Level-basic-one-hole.json')
 # Atari Actions: 0 (noop), 1 (fire), 2 (left) and 3 (rig)
 VALID_ACTIONS = [0, 1, 2, 3,4 ,5 ]
 WINDOW_LENGTH = 4
+IMAGE_SIZE = 128
+MAX_PIXEL = 255.0
 # MAP_MULTIPLIER = 30.9
 
 class StateProcessor():
@@ -34,12 +36,12 @@ class StateProcessor():
             self.output1 = tf.expand_dims(self.input_state[:,:,0], 2)
 
             self.output1 = tf.image.resize_images(
-                self.output1, [84, 84], method=tf.image.ResizeMethod.NEAREST_NEIGHBOR)
+                self.output1, [IMAGE_SIZE, IMAGE_SIZE], method=tf.image.ResizeMethod.NEAREST_NEIGHBOR)
             self.output1 = tf.squeeze(self.output1)
 
             self.output2 = tf.expand_dims(self.input_state[:,:,1], 2)
             self.output2 = tf.image.resize_images(
-                self.output2, [84, 84], method=tf.image.ResizeMethod.NEAREST_NEIGHBOR)
+                self.output2, [IMAGE_SIZE, IMAGE_SIZE], method=tf.image.ResizeMethod.NEAREST_NEIGHBOR)
             self.output2 = tf.squeeze(self.output2)
 
 
@@ -83,15 +85,14 @@ class Estimator():
 
         # Placeholders for our input
         # Our input are WINDOW_LENGTH RGB frames of shape 160, 160 each
-        self.X_pl = tf.placeholder(shape=[None, 84, 84, WINDOW_LENGTH], dtype=tf.uint8, name="X")
-        # The TD target value
+        self.X_pl = tf.placeholder(shape=[None, IMAGE_SIZE, IMAGE_SIZE, WINDOW_LENGTH], dtype=tf.uint8, name="X")
+        # The TD target val84, 84ue
         self.y_pl = tf.placeholder(shape=[None], dtype=tf.float32, name="y")
         # Integer id of which action was selected
         self.actions_pl = tf.placeholder(shape=[None], dtype=tf.int32, name="actions")
 
-        X = tf.to_float(self.X_pl) / 255.0
+        X = self.normalize_pixels(self.X_pl)
         batch_size = tf.shape(self.X_pl)[0]
-
 
         # Three convolutional layers
         conv1 = tf.contrib.layers.conv2d(
@@ -126,6 +127,11 @@ class Estimator():
             tf.summary.scalar("max_q_value", tf.reduce_max(self.predictions))
         ])
 
+    def normalize_pixels(self, X):
+
+        X = tf.to_float(X) / MAX_PIXEL
+
+        return X
 
     def predict(self, sess, s):
         """
@@ -154,7 +160,7 @@ class Estimator():
         Returns:
           The calculated loss on the batch.
         """
-        feed_dict = { self.X_pl: s, self.y_pl: y, self.actions_pl: a }
+        feed_dict = { self.X_pl: s, self.y_pl: y, self.actions_pl: a}
         summaries, global_step, _, loss = sess.run(
             [self.summaries, tf.contrib.framework.get_global_step(), self.train_op, self.loss],
             feed_dict)
@@ -299,42 +305,31 @@ def deep_q_learning(sess,
     print("Populating replay memory...")
     total_state = env.reset(levelname='Level-basic-one-hole.json')
     state = state_processor.process(sess, total_state, 1)
-    enemy_state = state_processor.process(sess, total_state, 2)
 
     state = np.stack([state] * WINDOW_LENGTH, axis=2)
-    enemy_state = np.stack([enemy_state] * WINDOW_LENGTH, axis=2)
     total_death = 0
 
-    total_state = np.stack([state, enemy_state], axis=2)
+    total_state = np.stack([state], axis=2)
 
     for i in range(replay_memory_init_size):
         action_probs = policy(sess, state, epsilons[min(total_t, epsilon_decay_steps-1)])
         action = np.random.choice(np.arange(len(action_probs)), p=action_probs)
 
         next_total_state, reward, done, info = env.step(VALID_ACTIONS[action])
-        level_up = 0
         next_state = state_processor.process(sess, next_total_state, 1)
         next_state = np.append(state[:,:,1:], np.expand_dims(next_state, 2), axis=2)
 
-        next_enemy_state = state_processor.process(sess, next_total_state, 2)
-        next_enemy_state = np.append(enemy_state[:, :, 1:], np.expand_dims(next_enemy_state, 2), axis=2)
-
-        next_total_state = np.stack([next_state, next_enemy_state], axis=2)
+        next_total_state = np.stack([next_state], axis=2)
 
 
         replay_memory.append(Transition(total_state, action, reward, next_total_state, done))
         if done:
             total_state = env.reset(levelname='Level-basic-one-hole.json')
             state = state_processor.process(sess, total_state, 1)
-            enemy_state = state_processor.process(sess, total_state, 2)
 
             state = np.stack([state] * WINDOW_LENGTH, axis=2)
-            enemy_state = np.stack([enemy_state] * WINDOW_LENGTH, axis=2)
-
-            total_state = np.stack([state, enemy_state], axis=2)
         else:
             state = next_state
-            enemy_state = next_enemy_state
             total_state = next_total_state
 
     # Record videos
@@ -353,12 +348,9 @@ def deep_q_learning(sess,
         # Reset the environment
         total_state = env.reset(levelname='Level-basic-one-hole.json')
         state = state_processor.process(sess, total_state, 1)
-        enemy_state = state_processor.process(sess, total_state, 2)
-
         state = np.stack([state] * WINDOW_LENGTH, axis=2)
-        enemy_state = np.stack([enemy_state] * WINDOW_LENGTH, axis=2)
 
-        total_state = np.stack([state, enemy_state], axis=2)
+        total_state = np.stack([state], axis=2)
 
         loss = None
 
@@ -391,10 +383,7 @@ def deep_q_learning(sess,
             next_state = state_processor.process(sess, next_total_state, 1)
             next_state = np.append(state[:, :, 1:], np.expand_dims(next_state, 2), axis=2)
 
-            next_enemy_state = state_processor.process(sess, next_total_state, 2)
-            next_enemy_state = np.append(enemy_state[:, :, 1:], np.expand_dims(next_enemy_state, 2), axis=2)
-
-            next_total_state = np.stack([next_state, next_enemy_state], axis=2)
+            next_total_state = np.stack([next_state], axis=2)
 
             # If our replay memory is full, pop the first element
             if len(replay_memory) == replay_memory_size:
@@ -418,17 +407,14 @@ def deep_q_learning(sess,
 
             # Calculate q values and targets (Double DQN)coins_left
             q_values_next = q_estimator.predict(sess, next_states_batch[:,:,:,0,:])
-            q_values_enemy_next = q_estimator.predict(sess, next_states_batch[:,:,:,1,:])
 
-            q_values_next_total = selfishness*q_values_next + (1-selfishness)*q_values_enemy_next
+            q_values_next_total = q_values_next
 
             best_actions = np.argmax(q_values_next_total, axis=1)
             q_values_next_target = target_estimator.predict(sess, next_states_batch[:,:,:,0,:])
-            q_values_enemy_next_target = target_estimator.predict(sess, next_states_batch[:,:,:,1,:])
 
             targets_batch = reward_batch + np.invert(done_batch).astype(np.float32) * \
-                            (discount_factor * selfishness * q_values_next_target[np.arange(batch_size), best_actions] + \
-                                discount_factor * (1 - selfishness) * np.mean(q_values_enemy_next_target[np.arange(batch_size), :], axis=1))
+                            (discount_factor * q_values_next_target[np.arange(batch_size), best_actions])
 
             # Perform gradient descent update
             states_batch = np.array(states_batch)
@@ -439,12 +425,11 @@ def deep_q_learning(sess,
 
             if done:
                 break
-
-            enemy_state = next_enemy_state
             state = next_state
             total_state = next_total_state
             total_t += 1
         stats.episode_levels[i_episode] += 1
+
         # Add summaries to tensorboard
         episode_summary = tf.Summary()
         episode_summary.value.add(simple_value=stats.episode_rewards[i_episode], node_name="episode_reward", tag="episode_reward")
