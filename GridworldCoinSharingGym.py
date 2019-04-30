@@ -39,7 +39,8 @@ class GridworldCoinSharingGym(gym.Env):
         self.coins_collected = 0
         self.enemy_coins_collected = 0
         self.steps = 0
-        self.agent_can_start = np.random.choice([0, 1])
+        #self.agent_can_start = np.random.choice([0, 1])
+        self.agent_can_start = 1
         self.get_observation()
 
         return self.observation
@@ -139,7 +140,7 @@ class GridworldCoinSharingGym(gym.Env):
                 self.coins_collected += 1
                 self.coin_positions = [coin_pos for coin_pos in self.coin_positions if coin_pos != self.agent_position]
 
-        if ((not self.agent_can_start) or self.steps > 0): # and self.steps % 2 == 0:
+        if ((not self.agent_can_start) or self.steps > 50): # and self.steps % 2 == 0:
             #move enemies
             for i, pos in enumerate(self.enemy_positions):
                 if self.steps % 7 == 0:
