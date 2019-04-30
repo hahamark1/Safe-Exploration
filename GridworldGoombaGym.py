@@ -11,14 +11,17 @@ from gym.utils import seeding
 MOVES = ['moveLeft', 'moveRight', 'moveUp', 'moveDown']
 
 
-class GridworldGym(gym.Env):
+class GridworldGoombaGym(gym.Env):
 
-    def __init__(self, headless=True, gridworld_size=11, max_steps=400, kill_reward=0, step_reward=1, dead_reward=0):
+    def __init__(self, headless=True, gridworld_size=11, max_steps=20000, kill_reward=0, step_reward=1, dead_reward=0, window_size=5, seed=0):
+        np.random.seed(seed)
+        random.seed(seed)
         self.action_space = spaces.Discrete(4)
-        self.observation_space = spaces.Box(low=-10000000, high=100000000, dtype=np.float, shape=(7, 7, 2))
+        self.observation_space = spaces.Box(low=-10000000, high=100000000, dtype=np.float, shape=(window_size, window_size, 2))
         plt.ion()
         self.headless = headless
         self.gridworld_size = gridworld_size
+        self.window_size = window_size
         self.max_steps = max_steps
         self.kill_reward = kill_reward
         self.step_reward = step_reward
@@ -28,10 +31,15 @@ class GridworldGym(gym.Env):
 
     def reset(self):
 
-        self.agent_position = [6, 6]
+        self.agent_position = [int(self.gridworld_size/2), int(self.gridworld_size/2)]
 
-        self.enemy_positions = [[0,0]]
+        self.enemy_positions = [[0,0], [1,3], [6,5]]
+        #self.coin_positions = [[x,y] for y in range(1, self.gridworld_size, 2) for x in range(1, self.gridworld_size, 2)]
+        self.coin_positions = []
+        self.coins_collected = 0
+        self.enemy_coins_collected = 0
         self.steps = 0
+        self.agent_can_start = np.random.choice([0, 1])
         self.get_observation()
 
         return self.observation
@@ -39,34 +47,50 @@ class GridworldGym(gym.Env):
     def get_observation(self):
         self.observation = np.zeros((self.gridworld_size, self.gridworld_size))
 
-        self.observation[max(0, min(self.agent_position[0], self.gridworld_size-1)), max(0, min(self.agent_position[1], self.gridworld_size-1))] = 1
+        for coin in self.coin_positions:
+            self.observation[coin[0], coin[1]] = -1
+
+        self.observation[max(0, min(self.agent_position[0], self.gridworld_size-1)), max(0, min(self.agent_position[1], self.gridworld_size-1))] = 5*(self.coins_collected + 1)
+
+
         closest_enemy = None
         closest_distance = np.inf
         for pos in self.enemy_positions:
-            self.observation[max(0, min(pos[0], self.gridworld_size-1)), max(0, min(pos[1], self.gridworld_size-1))] = -1
+            #self.observation[max(0, min(pos[0], self.gridworld_size-1)), max(0, min(pos[1], self.gridworld_size-1))] = 5*(self.enemy_coins_collected + 1)
             distance = np.linalg.norm(np.array(pos)-np.array(self.agent_position))
             if distance < closest_distance:
                 closest_distance = distance
                 closest_enemy = pos
 
-        window = [range(self.agent_position[0] - 3, self.agent_position[0] + 4), range(self.agent_position[1] - 3, self.agent_position[1] + 4)]
-        agent_observation = self.observation.take(window[0], axis=0, mode='wrap')
 
-        agent_observation = agent_observation.take(window[1], axis=1, mode='wrap')
 
         if closest_enemy:
-            enemy_window = [range(closest_enemy[0] - 3, closest_enemy[0] + 4), range(closest_enemy[1] - 3, closest_enemy[1] + 4)]
+            self.observation[max(0, min(closest_enemy[0], self.gridworld_size - 1)), max(0, min(closest_enemy[1], self.gridworld_size - 1))] = \
+                5 * (self.enemy_coins_collected + 1)
+
+
+            window = [range(self.agent_position[0] - int(self.window_size / 2),
+                            self.agent_position[0] + int(self.window_size / 2) + 1),
+                      range(self.agent_position[1] - int(self.window_size / 2),
+                            self.agent_position[1] + int(self.window_size / 2) + 1)]
+            agent_observation = self.observation.take(window[0], axis=0, mode='wrap')
+
+            agent_observation = agent_observation.take(window[1], axis=1, mode='wrap')
+
+            enemy_window = [range(closest_enemy[0] - int(self.window_size/2), closest_enemy[0] + int(self.window_size/2) + 1), range(closest_enemy[1] - int(self.window_size/2), closest_enemy[1] + int(self.window_size/2) + 1)]
             enemy_observation = self.observation.take(enemy_window[0], axis=0, mode='wrap')
             enemy_observation = enemy_observation.take(enemy_window[1], axis=1, mode='wrap')
 
-            # Swap enemies and agents
-            enemy_observation = enemy_observation*-1
+            # # Swap enemies and agents
+            #enemy_observation[enemy_observation > 1] = 5*self.coins_collected
+            # enemy_observation[3, 3] = 1
+            #
+            # # add the number of coins collected to the observation
+            # enemy_observation[3, 3] = 5 * self.enemy_coins_collected
 
-            #for now I also remove all the other enemies, TODO: test without this
-            enemy_observation = np.clip(enemy_observation, -1, 0)
-            enemy_observation[3,3] = 1
         else:
-            enemy_observation = np.zeros((7,7))
+            agent_observation = np.zeros((self.window_size, self.window_size))
+            enemy_observation = np.zeros((self.window_size, self.window_size))
 
         self.observation = np.dstack([agent_observation, enemy_observation])
         return self.observation
@@ -79,11 +103,15 @@ class GridworldGym(gym.Env):
         env[max(0, min(self.agent_position[0], self.gridworld_size-1)), max(0, min(self.agent_position[1], self.gridworld_size-1))] = 1
         for pos in self.enemy_positions:
             env[max(0, min(pos[0], self.gridworld_size-1)), max(0, min(pos[1], self.gridworld_size-1))] = -1
+
         if not self.headless:
-            plt.matshow(self.observation[:,:,0], 1)
+            plt.matshow(self.observation[:,:,0], 1, cmap='gray')
             plt.draw()
-            plt.pause(0.1)
-            plt.matshow(self.observation[:,:,1], 2)
+            plt.matshow(env, 3, cmap='gray')
+            plt.draw()
+            plt.matshow(self.observation[:,:,1], 2, cmap='gray')
+            plt.draw()
+            plt.matshow(env, 3, cmap='gray')
             plt.draw()
             plt.pause(0.1)
 
@@ -92,12 +120,12 @@ class GridworldGym(gym.Env):
         #increase counter
         self.steps += 1
 
-        #update agents
-        dead = (self.agent_position in [[x[0] +1, x[1]] for x in self.enemy_positions]) or (self.agent_position in [[x[0], x[1] +1] for x in self.enemy_positions])
+        # update deads
+        dead = (self.agent_position in [[x[0] + 1, x[1]] for x in self.enemy_positions]) or (
+                    self.agent_position in [[x[0], x[1] + 1] for x in self.enemy_positions])
         num_enemies_killed = self.kill_enemies()
 
-        if not dead and self.steps % 2 == 0:
-
+        if not dead:
             #move agent
             if action_num == 0:
                 self.agent_position = [(self.agent_position[0] + 1) % self.gridworld_size, self.agent_position[1]]
@@ -111,10 +139,19 @@ class GridworldGym(gym.Env):
             if not self.headless:
                 self.plot_env()
 
-        elif not dead:
+            # update deads
+            dead = dead or (self.agent_position in [[x[0] + 1, x[1]] for x in self.enemy_positions]) or (
+                        self.agent_position in [[x[0], x[1] + 1] for x in self.enemy_positions])
+            num_enemies_killed += self.kill_enemies()
+
+        if not dead:
             #move enemies
             for i, pos in enumerate(self.enemy_positions):
-                action = np.random.choice(range(4))
+                if self.steps % 7 == 0:
+                    action = 1
+                else:
+                    action = 2
+                #action = np.random.choice(range(4))
                 if action == 0:
                     pos = [(pos[0] + 1) % self.gridworld_size, pos[1]]
                 elif action == 1:
@@ -125,26 +162,24 @@ class GridworldGym(gym.Env):
                     pos = [pos[0], (pos[1] - 1) % self.gridworld_size]
                 self.enemy_positions[i] = pos
 
+
+
             if not self.headless:
                 self.plot_env()
-                a=1
-
-        if dead:
-            self.reset()
-            if not self.headless:
-                plt.pause(3.0)
 
         reward = self.step_reward + self.kill_reward*num_enemies_killed + self.dead_reward*dead
-        info = {'num_killed': num_enemies_killed, 'got_killed': dead}
 
-        restart = dead or self.steps > self.max_steps
+        info = {'got_killed': dead, 'num_killed': num_enemies_killed, 'coins_collected': 0, 'enemy_coins_collected': 0, 'enemy_reward': 0}
+
+        restart = dead or len(self.enemy_positions) == 0 or self.steps > self.max_steps
 
         self.observation = self.get_observation()
 
+        if restart:
+            self.reset()
+
         return self.observation, reward, restart, info
 
-    def render(self, mode='human', close=False):
-        pass
 
     def kill_enemies(self):
         enemies_to_be_killed = []
@@ -155,8 +190,13 @@ class GridworldGym(gym.Env):
         return len(enemies_to_be_killed)
 
 
+    def render(self, mode='human', close=False):
+        pass
+
+
+
 if __name__ == "__main__":
-    env = GridworldGym(headless=False)
+    env = GridworldGoombaGym(headless=False, gridworld_size=7)
 
 
     while True:

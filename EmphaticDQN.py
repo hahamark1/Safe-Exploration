@@ -9,6 +9,7 @@ from datetime import datetime
 
 from GridworldCoinSharingGym import GridworldCoinSharingGym
 from GridworldTest import GridworldTest
+from GridworldGoombaGym import GridworldGoombaGym
 import tensorflow as tf
 
 if "../" not in sys.path:
@@ -490,15 +491,15 @@ def deep_q_learning(sess,
 
 
 step_reward = 1
-dead_reward = -400
-kill_reward = -800
-max_steps = 2000
-selfishness = 0.6
+dead_reward = -1000
+kill_reward = 0
+max_steps = 1000
+selfishness = 1.0
 
 tf.reset_default_graph()
 
 # Where we save our checkpoints and graphs
-experiment_dir = os.path.abspath(f"logs/coinsharing/version_6.2/maxsteps_{max_steps}/step_reward_{step_reward}/dead_reward_{dead_reward}/kill_reward_{kill_reward}/selfishness_{selfishness}/{str(datetime.now())}/")
+experiment_dir = os.path.abspath(f"logs/goomba/version_6.7/maxsteps_{max_steps}/step_reward_{step_reward}/dead_reward_{dead_reward}/kill_reward_{kill_reward}/selfishness_{selfishness}/")
 
 # Create a glboal step variable
 global_step = tf.Variable(0, name='global_step', trainable=False)
@@ -512,7 +513,7 @@ state_processor = StateProcessor()
 
 
 
-env = GridworldCoinSharingGym(headless=True, step_reward=step_reward, dead_reward=dead_reward, kill_reward=kill_reward, max_steps=max_steps, gridworld_size=7, seed=seed)
+env = GridworldGoombaGym(headless=True, step_reward=step_reward, dead_reward=dead_reward, kill_reward=kill_reward, max_steps=max_steps, gridworld_size=7, seed=seed)
 
 with tf.Session() as sess:
     sess.run(tf.global_variables_initializer())
