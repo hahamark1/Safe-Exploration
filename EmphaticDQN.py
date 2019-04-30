@@ -499,7 +499,7 @@ selfishness = 1.0
 tf.reset_default_graph()
 
 # Where we save our checkpoints and graphs
-experiment_dir = os.path.abspath(f"logs/goomba/version_6.7/maxsteps_{max_steps}/step_reward_{step_reward}/dead_reward_{dead_reward}/kill_reward_{kill_reward}/selfishness_{selfishness}/")
+experiment_dir = os.path.abspath(f"logs/goomba/version_6.8/maxsteps_{max_steps}/step_reward_{step_reward}/dead_reward_{dead_reward}/kill_reward_{kill_reward}/selfishness_{selfishness}/")
 
 # Create a glboal step variable
 global_step = tf.Variable(0, name='global_step', trainable=False)

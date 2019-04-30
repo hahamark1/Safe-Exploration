@@ -52,6 +52,12 @@ class GridworldGoombaGym(gym.Env):
 
         self.observation[max(0, min(self.agent_position[0], self.gridworld_size-1)), max(0, min(self.agent_position[1], self.gridworld_size-1))] = 5*(self.coins_collected + 1)
 
+        window = [range(self.agent_position[0] - int(self.window_size / 2),
+                        self.agent_position[0] + int(self.window_size / 2) + 1),
+                  range(self.agent_position[1] - int(self.window_size / 2),
+                        self.agent_position[1] + int(self.window_size / 2) + 1)]
+        agent_observation = self.observation.take(window[0], axis=0, mode='wrap')
+        agent_observation = agent_observation.take(window[1], axis=1, mode='wrap')
 
         closest_enemy = None
         closest_distance = np.inf
@@ -61,8 +67,6 @@ class GridworldGoombaGym(gym.Env):
             if distance < closest_distance:
                 closest_distance = distance
                 closest_enemy = pos
-
-
 
         if closest_enemy:
             self.observation[max(0, min(closest_enemy[0], self.gridworld_size - 1)), max(0, min(closest_enemy[1], self.gridworld_size - 1))] = \
@@ -89,7 +93,6 @@ class GridworldGoombaGym(gym.Env):
             # enemy_observation[3, 3] = 5 * self.enemy_coins_collected
 
         else:
-            agent_observation = np.zeros((self.window_size, self.window_size))
             enemy_observation = np.zeros((self.window_size, self.window_size))
 
         self.observation = np.dstack([agent_observation, enemy_observation])
@@ -171,7 +174,7 @@ class GridworldGoombaGym(gym.Env):
 
         info = {'got_killed': dead, 'num_killed': num_enemies_killed, 'coins_collected': 0, 'enemy_coins_collected': 0, 'enemy_reward': 0}
 
-        restart = dead or len(self.enemy_positions) == 0 or self.steps > self.max_steps
+        restart = dead or self.steps > self.max_steps
 
         self.observation = self.get_observation()
 
