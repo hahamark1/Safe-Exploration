@@ -51,7 +51,7 @@ class GridworldCoinSharingGym(gym.Env):
         for coin in self.coin_positions:
             self.observation[coin[0], coin[1]] = -1
 
-        self.observation[max(0, min(self.agent_position[0], self.gridworld_size-1)), max(0, min(self.agent_position[1], self.gridworld_size-1))] = 5*(self.coins_collected + 1)
+        self.observation[max(0, min(self.agent_position[0], self.gridworld_size-1)), max(0, min(self.agent_position[1], self.gridworld_size-1))] = 0.1*(self.coins_collected + 1)
 
 
         closest_enemy = None
@@ -63,7 +63,7 @@ class GridworldCoinSharingGym(gym.Env):
                 closest_distance = distance
                 closest_enemy = pos
 
-        self.observation[max(0, min(closest_enemy[0], self.gridworld_size-1)), max(0, min(closest_enemy[1], self.gridworld_size-1))] = 5*(self.enemy_coins_collected + 1)
+        self.observation[max(0, min(closest_enemy[0], self.gridworld_size-1)), max(0, min(closest_enemy[1], self.gridworld_size-1))] = 0.1*(self.enemy_coins_collected + 1)
 
 
 
@@ -104,14 +104,12 @@ class GridworldCoinSharingGym(gym.Env):
         if not self.headless:
             plt.matshow(self.observation[:,:,0], 1, cmap='gray')
             plt.draw()
-            plt.pause(0.1)
             plt.matshow(env, 3, cmap='gray')
             plt.draw()
-            plt.pause(0.1)
             plt.matshow(self.observation[:,:,1], 2, cmap='gray')
             plt.draw()
-            plt.pause(0.1)
-            plt.clf()
+            plt.pause(0.01)
+            #plt.clf()
 
     def step(self, action_num):
 
@@ -140,7 +138,7 @@ class GridworldCoinSharingGym(gym.Env):
                 self.coins_collected += 1
                 self.coin_positions = [coin_pos for coin_pos in self.coin_positions if coin_pos != self.agent_position]
 
-        if ((not self.agent_can_start) or self.steps > 50): # and self.steps % 2 == 0:
+        if ((not self.agent_can_start) or self.steps > 20): # and self.steps % 2 == 0:
             #move enemies
             for i, pos in enumerate(self.enemy_positions):
                 if self.steps % 7 == 0:
