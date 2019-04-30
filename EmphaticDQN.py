@@ -7,7 +7,8 @@ import random
 import sys
 from datetime import datetime
 
-from MarioGym import MarioGym
+from GridworldCoinSharingGym import GridworldCoinSharingGym
+from GridworldTest import GridworldTest
 import tensorflow as tf
 
 if "../" not in sys.path:
@@ -17,9 +18,17 @@ from lib import plotting
 from collections import deque, namedtuple
 
 
+seed = 234
+np.random.seed(seed)
+random.seed(seed)
+
+
+
+
 # Atari Actions: 0 (noop), 1 (fire), 2 (left) and 3 (right) are valid actions
 VALID_ACTIONS = [0, 1, 2, 3, 4, 5]
-WINDOW_LENGTH = 4
+WINDOW_LENGTH = 1
+INPUT_DIM = 5
 
 class StateProcessor():
     """
@@ -28,18 +37,18 @@ class StateProcessor():
     def __init__(self):
         # Build the Tensorflow graph
         with tf.variable_scope("state_processor"):
-            self.input_state = tf.placeholder(shape=[64, 64, 2], dtype=tf.uint8)
+            self.input_state = tf.placeholder(shape=[INPUT_DIM, INPUT_DIM, 2], dtype=tf.float64)
 
-            self.output1 = tf.expand_dims(self.input_state[:,:,0], 2)
+            self.output1 = self.input_state[:,:,0]
 
-            self.output1 = tf.image.resize_images(
-                self.output1, [84, 84], method=tf.image.ResizeMethod.NEAREST_NEIGHBOR)
-            self.output1 = tf.squeeze(self.output1)
+            #self.output1 = tf.image.resize_images(
+            #    self.output1, [5, 5], method=tf.image.ResizeMethod.NEAREST_NEIGHBOR)
+            #self.output1 = tf.squeeze(self.output1)
 
-            self.output2 = tf.expand_dims(self.input_state[:,:,1], 2)
-            self.output2 = tf.image.resize_images(
-                self.output2, [84, 84], method=tf.image.ResizeMethod.NEAREST_NEIGHBOR)
-            self.output2 = tf.squeeze(self.output2)
+            self.output2 = self.input_state[:,:,1]
+            #self.output2 = tf.image.resize_images(
+            #    self.output2, [5, 5], method=tf.image.ResizeMethod.NEAREST_NEIGHBOR)
+            #self.output2 = tf.squeeze(self.output2)
 
 
     def process(self, sess, state, output):
@@ -63,6 +72,8 @@ class Estimator():
     """
 
     def __init__(self, scope="estimator", summaries_dir=None):
+        tf.set_random_seed(seed)
+
         self.scope = scope
         # Writes Tensorboard summaries to disk
         self.summary_writer = None
@@ -82,28 +93,30 @@ class Estimator():
 
         # Placeholders for our input
         # Our input are WINDOW_LENGTH RGB frames of shape 160, 160 each
-        self.X_pl = tf.placeholder(shape=[None, 84, 84, WINDOW_LENGTH], dtype=tf.uint8, name="X")
+        self.X_pl = tf.placeholder(shape=[None, 5, 5, WINDOW_LENGTH], dtype=tf.uint8, name="X")
         # The TD target value
         self.y_pl = tf.placeholder(shape=[None], dtype=tf.float32, name="y")
         # Integer id of which action was selected
         self.actions_pl = tf.placeholder(shape=[None], dtype=tf.int32, name="actions")
 
-        X = tf.to_float(self.X_pl) / 255.0
+        X = tf.to_float(self.X_pl) / 100
         batch_size = tf.shape(self.X_pl)[0]
 
 
-        # Three convolutional layers
-        conv1 = tf.contrib.layers.conv2d(
-            X, 32, 8, 4, activation_fn=tf.nn.relu)
-        conv2 = tf.contrib.layers.conv2d(
-            conv1, 64, 4, 2, activation_fn=tf.nn.relu)
-        conv3 = tf.contrib.layers.conv2d(
-            conv2, 64, 3, 1, activation_fn=tf.nn.relu)
+        # # Three convolutional layers
+        #conv1 = tf.contrib.layers.conv2d(
+        #     X, 32, 3, 1, padding='SAME', activation_fn=tf.nn.relu)
+        # conv2 = tf.contrib.layers.conv2d(
+        #     conv1, 32, 3, 1, padding='SAME', activation_fn=tf.nn.relu)
+        # conv3 = tf.contrib.layers.conv2d(
+        #     conv2, 64, 3, 1, padding='SAME', activation_fn=tf.nn.relu)
 
         # Fully connected layers
-        flattened = tf.contrib.layers.flatten(conv3)
-        fc1 = tf.contrib.layers.fully_connected(flattened, 512)
-        self.predictions = tf.contrib.layers.fully_connected(fc1, len(VALID_ACTIONS))
+        flattened = tf.contrib.layers.flatten(X)
+        fc1 = tf.contrib.layers.fully_connected(flattened, 128)
+        fc2 = tf.contrib.layers.fully_connected(fc1, 128)
+
+        self.predictions = tf.contrib.layers.fully_connected(fc2, len(VALID_ACTIONS))
 
         # Get the predictions for the chosen actions only
         gather_indices = tf.range(batch_size) * tf.shape(self.predictions)[1] + self.actions_pl
@@ -204,6 +217,11 @@ def make_epsilon_greedy_policy(estimator, nA):
         return A
     return policy_fn
 
+def log_scalar(tag, value, global_step, writer):
+    summary = tf.Summary()
+    summary.value.add(tag=tag, simple_value=value)
+    writer.add_summary(summary, global_step=global_step)
+    writer.flush()
 
 def deep_q_learning(sess,
                     env,
@@ -256,6 +274,10 @@ def deep_q_learning(sess,
     # The replay memory
     replay_memory = []
 
+    coins_collected = [0]
+    enemy_coins_collected = [0]
+    enemy_rewards = [0]
+
     # Keeps track of useful statistics
     stats = plotting.EpisodeStats(
         episode_lengths=np.zeros(num_episodes),
@@ -307,13 +329,12 @@ def deep_q_learning(sess,
         next_total_state, reward, done, info = env.step(VALID_ACTIONS[action])
 
         next_state = state_processor.process(sess, next_total_state, 1)
-        next_state = np.append(state[:,:,1:], np.expand_dims(next_state, 2), axis=2)
+        next_state = np.append(state[:, :, 1:], np.expand_dims(next_state, 2), axis=2)
 
         next_enemy_state = state_processor.process(sess, next_total_state, 2)
         next_enemy_state = np.append(enemy_state[:, :, 1:], np.expand_dims(next_enemy_state, 2), axis=2)
 
         next_total_state = np.stack([next_state, next_enemy_state], axis=2)
-
 
         replay_memory.append(Transition(total_state, action, reward, next_total_state, done))
         if done:
@@ -327,13 +348,9 @@ def deep_q_learning(sess,
             total_state = np.stack([state, enemy_state], axis=2)
         else:
             total_state = next_total_state
+            state = next_state
+            enemy_state = next_enemy_state
 
-    # Record videos
-    # Use the gym env Monitor wrapper
-    env = Monitor(env,
-                  directory=monitor_path,
-                  resume=True,
-                  video_callable=lambda count: count % record_video_every ==0)
 
     for i_episode in range(num_episodes):
 
@@ -369,9 +386,9 @@ def deep_q_learning(sess,
                 print("\nCopied model parameters to target network.")
 
             # Print out which step we're on, useful for debugging.
-            print("\rStep {} ({}) @ Episode {}/{}, loss: {}".format(
-                    t, total_t, i_episode + 1, num_episodes, loss), end="")
-            sys.stdout.flush()
+            #print("Step {} ({}) @ Episode {}/{}, loss: {}".format(
+            #        t, total_t, i_episode + 1, num_episodes, loss))
+            #sys.stdout.flush()
 
             # Take a step
             action_probs = policy(sess, state, epsilon)
@@ -385,6 +402,10 @@ def deep_q_learning(sess,
             next_enemy_state = np.append(enemy_state[:, :, 1:], np.expand_dims(next_enemy_state, 2), axis=2)
 
             next_total_state = np.stack([next_state, next_enemy_state], axis=2)
+
+            coins_collected[-1] += info['coins_collected']
+            enemy_coins_collected[-1] += info['enemy_coins_collected']
+            enemy_rewards[-1] += info['enemy_reward']
 
             # If our replay memory is full, pop the first element
             if len(replay_memory) == replay_memory_size:
@@ -406,7 +427,8 @@ def deep_q_learning(sess,
             q_values_next = q_estimator.predict(sess, next_states_batch[:,:,:,0,:])
             q_values_enemy_next = q_estimator.predict(sess, next_states_batch[:,:,:,1,:])
 
-            q_values_next_total = selfishness*q_values_next + (1-selfishness)*q_values_enemy_next
+            #q_values_next_total = selfishness*q_values_next + (1-selfishness)*q_values_enemy_next
+            q_values_next_total = q_values_next
 
             best_actions = np.argmax(q_values_next_total, axis=1)
             q_values_next_target = target_estimator.predict(sess, next_states_batch[:,:,:,0,:])
@@ -421,12 +443,33 @@ def deep_q_learning(sess,
 
             loss1 = q_estimator.update(sess, states_batch[:,:,:,0,:], action_batch, targets_batch)
 
-            loss = loss1
-
             if done:
-                break
+                equality = (2*min(enemy_rewards[-1], stats.episode_rewards[i_episode])) / (enemy_rewards[-1] + stats.episode_rewards[i_episode])
+                print(f'enemy_rewards: {enemy_rewards[-1]}, reward: {stats.episode_rewards[i_episode]}, equality: {equality}')
+                log_scalar('coins_collected', coins_collected[-1], total_t, q_estimator.summary_writer)
+                log_scalar('enemy_coins_collected', enemy_coins_collected[-1], total_t, q_estimator.summary_writer)
+                log_scalar('equality',equality, total_t, q_estimator.summary_writer)
 
-            state = next_state
+                coins_collected.append(0)
+                enemy_coins_collected.append(0)
+                enemy_rewards.append(0)
+
+                total_state = env.reset()
+                state = state_processor.process(sess, total_state, 1)
+                enemy_state = state_processor.process(sess, total_state, 2)
+
+                state = np.stack([state] * WINDOW_LENGTH, axis=2)
+                enemy_state = np.stack([enemy_state] * WINDOW_LENGTH, axis=2)
+
+                total_state = np.stack([state, enemy_state], axis=2)
+                break
+            else:
+                total_state = next_total_state
+                state = next_state
+                enemy_state = next_enemy_state
+
+
+            #state = next_state
             total_t += 1
 
         # Add summaries to tensorboard
@@ -449,13 +492,13 @@ def deep_q_learning(sess,
 step_reward = 1
 dead_reward = -400
 kill_reward = -800
-max_steps = 400
-selfishness = 1.0
+max_steps = 2000
+selfishness = 0.6
 
 tf.reset_default_graph()
 
 # Where we save our checkpoints and graphs
-experiment_dir = os.path.abspath(f"experiments/version_2.0/maxsteps_{max_steps}/step_reward_{step_reward}/dead_reward_{dead_reward}/kill_reward_{kill_reward}/selfishness_{selfishness}/{str(datetime.now())}/")
+experiment_dir = os.path.abspath(f"logs/coinsharing/version_6.2/maxsteps_{max_steps}/step_reward_{step_reward}/dead_reward_{dead_reward}/kill_reward_{kill_reward}/selfishness_{selfishness}/{str(datetime.now())}/")
 
 # Create a glboal step variable
 global_step = tf.Variable(0, name='global_step', trainable=False)
@@ -469,7 +512,7 @@ state_processor = StateProcessor()
 
 
 
-env = MarioGym(headless=True, step_reward=step_reward, dead_reward=dead_reward, kill_reward=kill_reward, max_steps=max_steps)
+env = GridworldCoinSharingGym(headless=True, step_reward=step_reward, dead_reward=dead_reward, kill_reward=kill_reward, max_steps=max_steps, gridworld_size=7, seed=seed)
 
 with tf.Session() as sess:
     sess.run(tf.global_variables_initializer())
@@ -479,9 +522,9 @@ with tf.Session() as sess:
                                     target_estimator=target_estimator,
                                     state_processor=state_processor,
                                     experiment_dir=experiment_dir,
-                                    num_episodes=100000,
+                                    num_episodes=1000000,
                                     replay_memory_size=500000,
-                                    replay_memory_init_size=10000,
+                                    replay_memory_init_size=1000,
                                     update_target_estimator_every=10000,
                                     epsilon_start=1.0,
                                     epsilon_end=0.1,
