@@ -99,7 +99,7 @@ class Estimator():
         # Integer id of which action was selected
         self.actions_pl = tf.placeholder(shape=[None], dtype=tf.int32, name="actions")
 
-        X = tf.to_float(self.X_pl)
+        X = tf.to_float(self.X_pl) / 100
         batch_size = tf.shape(self.X_pl)[0]
 
 
@@ -498,7 +498,7 @@ selfishness = 0.6
 tf.reset_default_graph()
 
 # Where we save our checkpoints and graphs
-experiment_dir = os.path.abspath(f"logs/coinsharing/version_6.4/maxsteps_{max_steps}/step_reward_{step_reward}/dead_reward_{dead_reward}/kill_reward_{kill_reward}/selfishness_{selfishness}/{str(datetime.now())}/")
+experiment_dir = os.path.abspath(f"logs/coinsharing/version_6.5/maxsteps_{max_steps}/step_reward_{step_reward}/dead_reward_{dead_reward}/kill_reward_{kill_reward}/selfishness_{selfishness}/{str(datetime.now())}/")
 
 # Create a glboal step variable
 global_step = tf.Variable(0, name='global_step', trainable=False)
