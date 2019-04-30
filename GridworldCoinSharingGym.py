@@ -138,7 +138,7 @@ class GridworldCoinSharingGym(gym.Env):
                 self.coins_collected += 1
                 self.coin_positions = [coin_pos for coin_pos in self.coin_positions if coin_pos != self.agent_position]
 
-        if ((not self.agent_can_start) or self.steps > 20): # and self.steps % 2 == 0:
+        if ((not self.agent_can_start) or self.steps > 0): # and self.steps % 2 == 0:
             #move enemies
             for i, pos in enumerate(self.enemy_positions):
                 if self.steps % 7 == 0:
