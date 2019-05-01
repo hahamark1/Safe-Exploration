@@ -139,15 +139,6 @@ class GridworldGoombaGym(gym.Env):
             elif action_num == 3:
                 self.agent_position = [self.agent_position[0], (self.agent_position[1] - 1) % self.gridworld_size]
 
-            if not self.headless:
-                self.plot_env()
-
-            # update deads
-            dead = dead or (self.agent_position in [[x[0] + 1, x[1]] for x in self.enemy_positions]) or (
-                        self.agent_position in [[x[0], x[1] + 1] for x in self.enemy_positions])
-            num_enemies_killed += self.kill_enemies()
-
-        if not dead:
             #move enemies
             for i, pos in enumerate(self.enemy_positions):
                 if self.steps % 7 == 0:
