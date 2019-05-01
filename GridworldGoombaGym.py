@@ -62,7 +62,7 @@ class GridworldGoombaGym(gym.Env):
         closest_enemy = None
         closest_distance = np.inf
         for pos in self.enemy_positions:
-            #self.observation[max(0, min(pos[0], self.gridworld_size-1)), max(0, min(pos[1], self.gridworld_size-1))] = 5*(self.enemy_coins_collected + 1)
+            self.observation[max(0, min(pos[0], self.gridworld_size-1)), max(0, min(pos[1], self.gridworld_size-1))] = 5*(self.enemy_coins_collected + 1)
             distance = np.linalg.norm(np.array(pos)-np.array(self.agent_position))
             if distance < closest_distance:
                 closest_distance = distance
@@ -125,7 +125,10 @@ class GridworldGoombaGym(gym.Env):
 
         # update deads
         dead = (self.agent_position in [[x[0] + 1, x[1]] for x in self.enemy_positions]) or (
-                    self.agent_position in [[x[0], x[1] + 1] for x in self.enemy_positions])
+                    self.agent_position in [[x[0], x[1] + 1] for x in self.enemy_positions]) or (
+                    self.agent_position in [[x[0], x[1]] for x in self.enemy_positions]
+        )
+
         num_enemies_killed = self.kill_enemies()
 
         if not dead:
@@ -169,6 +172,9 @@ class GridworldGoombaGym(gym.Env):
 
         self.observation = self.get_observation()
 
+        if dead:
+            self.observation = np.dstack([np.zeros((self.window_size, self.window_size)), np.zeros((self.window_size, self.window_size))])
+
         if restart:
             self.reset()
 
@@ -190,7 +196,7 @@ class GridworldGoombaGym(gym.Env):
 
 
 if __name__ == "__main__":
-    env = GridworldGoombaGym(headless=False, gridworld_size=7)
+    env = GridworldGoombaGym(headless=False, gridworld_size=7, window_size=7)
 
 
     while True:
