@@ -491,7 +491,7 @@ def deep_q_learning(sess,
 
 
 step_reward = 1
-dead_reward = -1000
+dead_reward = -100
 kill_reward = 0
 max_steps = 100
 selfishness = 1.0
