@@ -493,13 +493,13 @@ def deep_q_learning(sess,
 step_reward = 1
 dead_reward = -1000
 kill_reward = 0
-max_steps = 1000
+max_steps = 100
 selfishness = 1.0
 
 tf.reset_default_graph()
 
 # Where we save our checkpoints and graphs
-experiment_dir = os.path.abspath(f"logs/goomba/version_6.9/maxsteps_{max_steps}/step_reward_{step_reward}/dead_reward_{dead_reward}/kill_reward_{kill_reward}/selfishness_{selfishness}/")
+experiment_dir = os.path.abspath(f"logs/goomba/version_7.0/maxsteps_{max_steps}/step_reward_{step_reward}/dead_reward_{dead_reward}/kill_reward_{kill_reward}/selfishness_{selfishness}/")
 
 # Create a glboal step variable
 global_step = tf.Variable(0, name='global_step', trainable=False)
