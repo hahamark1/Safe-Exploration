@@ -108,7 +108,7 @@ class MarioGym(gym.Env):
 
         if self.mario.restart:
             reward -= HOLE_REWARD
-        if coins_left == 0:
+        if coins_left == 0 and coins_taken > 0:
             self.mario.restart = True
 
         restart = self.mario.restart or self.steps >= EPISODE_LENGTH
