@@ -95,6 +95,10 @@ class MarioGym(gym.Env):
                               and x.alive)])
 
         coins_taken = coins - len([x for x in self.level.entityList if ((x.__class__.__name__ == 'Coin'))])
+
+        coins_left = len([x for x in self.level.entityList
+                          if ((x.__class__.__name__ == 'Coin'))])
+
         self.observation = self.level_to_numpy()
         # print(coins_taken)
         info = {'num_killed': goombas_died,
@@ -104,7 +108,7 @@ class MarioGym(gym.Env):
 
         if self.mario.restart:
             reward -= HOLE_REWARD
-        if coins_taken > 0:
+        if coins_left == 0:
             self.mario.restart = True
 
         restart = self.mario.restart or self.steps >= EPISODE_LENGTH
