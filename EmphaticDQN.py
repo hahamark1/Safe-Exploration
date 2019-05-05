@@ -117,7 +117,7 @@ class Estimator():
         fc1 = tf.contrib.layers.fully_connected(flattened, 128)
         fc2 = tf.contrib.layers.fully_connected(fc1, 128)
 
-        self.predictions = tf.contrib.layers.fully_connected(fc2, len(VALID_ACTIONS))
+        self.predictions = tf.contrib.layers.fully_connected(fc2, len(VALID_ACTIONS), activation_fn=None)
 
         # Get the predictions for the chosen actions only
         gather_indices = tf.range(batch_size) * tf.shape(self.predictions)[1] + self.actions_pl
@@ -499,7 +499,7 @@ selfishness = 1.0
 tf.reset_default_graph()
 
 # Where we save our checkpoints and graphs
-experiment_dir = os.path.abspath(f"logs/goomba/version_7.5/maxsteps_{max_steps}/step_reward_{step_reward}/dead_reward_{dead_reward}/kill_reward_{kill_reward}/selfishness_{selfishness}/")
+experiment_dir = os.path.abspath(f"logs/goomba/version_7.8/maxsteps_{max_steps}/step_reward_{step_reward}/dead_reward_{dead_reward}/kill_reward_{kill_reward}/selfishness_{selfishness}/")
 
 # Create a glboal step variable
 global_step = tf.Variable(0, name='global_step', trainable=False)
