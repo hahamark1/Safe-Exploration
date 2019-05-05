@@ -123,41 +123,40 @@ class GridworldGoombaGym(gym.Env):
         #increase counter
         self.steps += 1
 
-        # update deads
-        dead = (self.agent_position in [[x[0] + 1, x[1]] for x in self.enemy_positions]) or (
+        #move agent
+        if action_num == 0:
+            self.agent_position = [(self.agent_position[0] + 1) % self.gridworld_size, self.agent_position[1]]
+        elif action_num == 1:
+            self.agent_position = [(self.agent_position[0] - 1) % self.gridworld_size, self.agent_position[1]]
+        elif action_num == 2:
+            self.agent_position = [self.agent_position[0], (self.agent_position[1] + 1) % self.gridworld_size]
+        elif action_num == 3:
+            self.agent_position = [self.agent_position[0], (self.agent_position[1] - 1) % self.gridworld_size]
+
+        #move enemies
+        for i, pos in enumerate(self.enemy_positions):
+            if self.steps % 7 == 0:
+                action = 1
+            else:
+                action = 2
+            #action = np.random.choice(range(4))
+            if action == 0:
+                pos = [(pos[0] + 1) % self.gridworld_size, pos[1]]
+            elif action == 1:
+                pos = [(pos[0] - 1) % self.gridworld_size, pos[1]]
+            elif action == 2:
+                pos = [pos[0], (pos[1] + 1) % self.gridworld_size]
+            elif action == 3:
+                pos = [pos[0], (pos[1] - 1) % self.gridworld_size]
+            self.enemy_positions[i] = pos
+
+            # update deads
+            dead = (self.agent_position in [[x[0] + 1, x[1]] for x in self.enemy_positions]) or (
                     self.agent_position in [[x[0], x[1] + 1] for x in self.enemy_positions]) or (
-                    self.agent_position in [[x[0], x[1]] for x in self.enemy_positions]
-        )
+                           self.agent_position in [[x[0], x[1]] for x in self.enemy_positions]
+                   )
 
-        num_enemies_killed = self.kill_enemies()
-
-        if not dead:
-            #move agent
-            if action_num == 0:
-                self.agent_position = [(self.agent_position[0] + 1) % self.gridworld_size, self.agent_position[1]]
-            elif action_num == 1:
-                self.agent_position = [(self.agent_position[0] - 1) % self.gridworld_size, self.agent_position[1]]
-            elif action_num == 2:
-                self.agent_position = [self.agent_position[0], (self.agent_position[1] + 1) % self.gridworld_size]
-            elif action_num == 3:
-                self.agent_position = [self.agent_position[0], (self.agent_position[1] - 1) % self.gridworld_size]
-
-            #move enemies
-            for i, pos in enumerate(self.enemy_positions):
-                if self.steps % 7 == 0:
-                    action = 1
-                else:
-                    action = 2
-                #action = np.random.choice(range(4))
-                if action == 0:
-                    pos = [(pos[0] + 1) % self.gridworld_size, pos[1]]
-                elif action == 1:
-                    pos = [(pos[0] - 1) % self.gridworld_size, pos[1]]
-                elif action == 2:
-                    pos = [pos[0], (pos[1] + 1) % self.gridworld_size]
-                elif action == 3:
-                    pos = [pos[0], (pos[1] - 1) % self.gridworld_size]
-                self.enemy_positions[i] = pos
+            num_enemies_killed = self.kill_enemies()
 
 
 
