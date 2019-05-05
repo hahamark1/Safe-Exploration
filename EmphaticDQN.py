@@ -492,14 +492,14 @@ def deep_q_learning(sess,
 
 step_reward = 1
 dead_reward = -100
-kill_reward = 0
+kill_reward = -100
 max_steps = 100
 selfishness = 1.0
 
 tf.reset_default_graph()
 
 # Where we save our checkpoints and graphs
-experiment_dir = os.path.abspath(f"logs/goomba/version_7.1/maxsteps_{max_steps}/step_reward_{step_reward}/dead_reward_{dead_reward}/kill_reward_{kill_reward}/selfishness_{selfishness}/")
+experiment_dir = os.path.abspath(f"logs/goomba/version_7.2/maxsteps_{max_steps}/step_reward_{step_reward}/dead_reward_{dead_reward}/kill_reward_{kill_reward}/selfishness_{selfishness}/")
 
 # Create a glboal step variable
 global_step = tf.Variable(0, name='global_step', trainable=False)
@@ -510,7 +510,6 @@ target_estimator = Estimator(scope="target_q")
 
 # State processor
 state_processor = StateProcessor()
-
 
 
 env = GridworldGoombaGym(headless=True, step_reward=step_reward, dead_reward=dead_reward, kill_reward=kill_reward, max_steps=max_steps, gridworld_size=7, seed=seed)
