@@ -150,18 +150,18 @@ class GridworldGoombaGym(gym.Env):
                 pos = [pos[0], (pos[1] - 1) % self.gridworld_size]
             self.enemy_positions[i] = pos
 
-            # update deads
-            dead = (self.agent_position in [[x[0] + 1, x[1]] for x in self.enemy_positions]) or (
-                    self.agent_position in [[x[0], x[1] + 1] for x in self.enemy_positions]) or (
-                           self.agent_position in [[x[0], x[1]] for x in self.enemy_positions]
-                   )
+        # update deads
+        dead = (self.agent_position in [[x[0] + 1, x[1]] for x in self.enemy_positions]) or (
+                self.agent_position in [[x[0], x[1] + 1] for x in self.enemy_positions]) or (
+                       self.agent_position in [[x[0], x[1]] for x in self.enemy_positions]
+               )
 
-            num_enemies_killed = self.kill_enemies()
+        num_enemies_killed = self.kill_enemies()
 
 
 
-            if not self.headless:
-                self.plot_env()
+        if not self.headless:
+            self.plot_env()
 
         reward = self.step_reward + self.kill_reward*num_enemies_killed + self.dead_reward*dead
 
@@ -195,7 +195,7 @@ class GridworldGoombaGym(gym.Env):
 
 
 if __name__ == "__main__":
-    env = GridworldGoombaGym(headless=False, gridworld_size=7, window_size=7)
+    env = GridworldGoombaGym(headless=True, gridworld_size=7, window_size=7)
 
 
     while True:
