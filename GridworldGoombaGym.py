@@ -199,5 +199,5 @@ if __name__ == "__main__":
 
 
     while True:
-        action = np.random.choice(range(4))
+        action = np.random.choice(range(8))
         env.step(action)

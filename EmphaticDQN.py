@@ -5,12 +5,16 @@ import numpy as np
 import os
 import random
 import sys
+import pickle
+
 from datetime import datetime
 
 from GridworldCoinSharingGym import GridworldCoinSharingGym
 from GridworldTest import GridworldTest
 from GridworldGoombaGym import GridworldGoombaGym
 import tensorflow as tf
+
+
 
 if "../" not in sys.path:
   sys.path.append("../")
@@ -25,42 +29,20 @@ random.seed(seed)
 
 
 
-
-# Atari Actions: 0 (noop), 1 (fire), 2 (left) and 3 (right) are valid actions
-VALID_ACTIONS = [0, 1, 2, 3, 4, 5]
+VALID_ACTIONS = [0, 1, 2, 3]
 WINDOW_LENGTH = 1
 INPUT_DIM = 5
 
 class StateProcessor():
-    """
-    Processes a raw Atari images. Resizes it and converts it to grayscale.
-    """
     def __init__(self):
         # Build the Tensorflow graph
         with tf.variable_scope("state_processor"):
             self.input_state = tf.placeholder(shape=[INPUT_DIM, INPUT_DIM, 2], dtype=tf.float64)
-
             self.output1 = self.input_state[:,:,0]
-
-            #self.output1 = tf.image.resize_images(
-            #    self.output1, [5, 5], method=tf.image.ResizeMethod.NEAREST_NEIGHBOR)
-            #self.output1 = tf.squeeze(self.output1)
-
             self.output2 = self.input_state[:,:,1]
-            #self.output2 = tf.image.resize_images(
-            #    self.output2, [5, 5], method=tf.image.ResizeMethod.NEAREST_NEIGHBOR)
-            #self.output2 = tf.squeeze(self.output2)
 
 
     def process(self, sess, state, output):
-        """
-        Args:
-            sess: A Tensorflow session object
-            state: A [210, 160, 3] Atari RGB State
-
-        Returns:
-            A processed [84, 84] state representing grayscale values.
-        """
         if output == 1:
             return sess.run(self.output1, {self.input_state: state})
         elif output == 2:
@@ -278,6 +260,9 @@ def deep_q_learning(sess,
     coins_collected = [0]
     enemy_coins_collected = [0]
     enemy_rewards = [0]
+    got_killed = [0]
+    enemies_killed = [0]
+    equalities = []
 
     # Keeps track of useful statistics
     stats = plotting.EpisodeStats(
@@ -289,11 +274,14 @@ def deep_q_learning(sess,
     checkpoint_dir = os.path.join(experiment_dir, "checkpoints")
     checkpoint_path = os.path.join(checkpoint_dir, "model")
     monitor_path = os.path.join(experiment_dir, "monitor")
+    pickle_path = os.path.join(experiment_dir, "pickles")
 
     if not os.path.exists(checkpoint_dir):
         os.makedirs(checkpoint_dir)
     if not os.path.exists(monitor_path):
         os.makedirs(monitor_path)
+    if not os.path.exists(pickle_path):
+        os.makedirs(pickle_path)
 
     saver = tf.train.Saver()
     # Load a previous checkpoint if we find one
@@ -407,6 +395,8 @@ def deep_q_learning(sess,
             coins_collected[-1] += info['coins_collected']
             enemy_coins_collected[-1] += info['enemy_coins_collected']
             enemy_rewards[-1] += info['enemy_reward']
+            got_killed[-1] += info['got_killed']
+            enemies_killed[-1] += info['num_killed']
 
             # If our replay memory is full, pop the first element
             if len(replay_memory) == replay_memory_size:
@@ -446,14 +436,23 @@ def deep_q_learning(sess,
 
             if done:
                 equality = (2*min(enemy_rewards[-1], stats.episode_rewards[i_episode])) / (enemy_rewards[-1] + stats.episode_rewards[i_episode])
+                equalities.append(equality)
                 print(f'enemy_rewards: {enemy_rewards[-1]}, reward: {stats.episode_rewards[i_episode]}, equality: {equality}')
                 log_scalar('coins_collected', coins_collected[-1], total_t, q_estimator.summary_writer)
                 log_scalar('enemy_coins_collected', enemy_coins_collected[-1], total_t, q_estimator.summary_writer)
                 log_scalar('equality',equality, total_t, q_estimator.summary_writer)
 
+                pickle.dump(coins_collected, open(f'{experiment_dir}/pickles/coins_collected.pickle', 'wb'))
+                pickle.dump(equalities, open(f'{experiment_dir}/pickles/equality.pickle', 'wb'))
+                pickle.dump(enemy_coins_collected, open(f'{experiment_dir}/pickles/enemy_coins_collected.pickle', 'wb'))
+                pickle.dump(got_killed, open(f'{experiment_dir}/pickles/got_killed.pickle', 'wb'))
+                pickle.dump(enemies_killed, open(f'{experiment_dir}/pickles/enemies_killed.pickle', 'wb'))
+
                 coins_collected.append(0)
                 enemy_coins_collected.append(0)
                 enemy_rewards.append(0)
+                got_killed.append(0)
+                enemies_killed.append(0)
 
                 total_state = env.reset()
                 state = state_processor.process(sess, total_state, 1)
@@ -490,16 +489,16 @@ def deep_q_learning(sess,
     return stats
 
 
-step_reward = 0.01
-dead_reward = -1
-kill_reward = -1
+step_reward = 1.0
+dead_reward = -100
+kill_reward = -100
 max_steps = 100
 selfishness = 1.0
 
 tf.reset_default_graph()
 
 # Where we save our checkpoints and graphs
-experiment_dir = os.path.abspath(f"logs/goomba/version_8.0/maxsteps_{max_steps}/step_reward_{step_reward}/dead_reward_{dead_reward}/kill_reward_{kill_reward}/selfishness_{selfishness}/")
+experiment_dir = os.path.abspath(f"logs/goomba/version_8.5/maxsteps_{max_steps}/step_reward_{step_reward}/dead_reward_{dead_reward}/kill_reward_{kill_reward}/selfishness_{selfishness}/seed_{seed}")
 
 # Create a glboal step variable
 global_step = tf.Variable(0, name='global_step', trainable=False)
@@ -522,12 +521,12 @@ with tf.Session() as sess:
                                     target_estimator=target_estimator,
                                     state_processor=state_processor,
                                     experiment_dir=experiment_dir,
-                                    num_episodes=1000000,
+                                    num_episodes=50000,
                                     replay_memory_size=500000,
-                                    replay_memory_init_size=1000,
+                                    replay_memory_init_size=50000,
                                     update_target_estimator_every=10000,
                                     epsilon_start=1.0,
-                                    epsilon_end=0.1,
+                                    epsilon_end=0.01,
                                     epsilon_decay_steps=500000,
                                     discount_factor=0.99,
                                     batch_size=32,
