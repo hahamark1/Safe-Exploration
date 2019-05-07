@@ -496,7 +496,7 @@ def deep_q_learning(sess,
     return stats
 
 
-step_reward = 0.01
+step_reward = 1
 dead_reward = 0
 kill_reward = -100
 max_steps = 500
