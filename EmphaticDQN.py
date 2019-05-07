@@ -265,6 +265,8 @@ def deep_q_learning(sess,
     got_killed = [0]
     enemies_killed = [0]
     equalities = []
+    rewards = [0]
+    episode_steps = []
 
     # Keeps track of useful statistics
     stats = plotting.EpisodeStats(
@@ -399,6 +401,7 @@ def deep_q_learning(sess,
             enemy_rewards[-1] += info['enemy_reward']
             got_killed[-1] += info['got_killed']
             enemies_killed[-1] += info['num_killed']
+            rewards[-1] += reward
 
             # If our replay memory is full, pop the first element
             if len(replay_memory) == replay_memory_size:
@@ -443,6 +446,7 @@ def deep_q_learning(sess,
             if done:
                 equality = (2*min(enemy_rewards[-1], stats.episode_rewards[i_episode])) / (enemy_rewards[-1] + stats.episode_rewards[i_episode])
                 equalities.append(equality)
+                episode_steps.append(t)
                 print(f'enemy_rewards: {enemy_rewards[-1]}, reward: {stats.episode_rewards[i_episode]}, equality: {equality}')
                 log_scalar('coins_collected', coins_collected[-1], total_t, q_estimator.summary_writer)
                 log_scalar('enemy_coins_collected', enemy_coins_collected[-1], total_t, q_estimator.summary_writer)
@@ -453,13 +457,15 @@ def deep_q_learning(sess,
                 pickle.dump(enemy_coins_collected, open(f'{experiment_dir}/pickles/enemy_coins_collected.pickle', 'wb'))
                 pickle.dump(got_killed, open(f'{experiment_dir}/pickles/got_killed.pickle', 'wb'))
                 pickle.dump(enemies_killed, open(f'{experiment_dir}/pickles/enemies_killed.pickle', 'wb'))
-                pickle.dump(t, open(f'{experiment_dir}/pickles/episode_length.pickle', 'wb'))
+                pickle.dump(episode_steps, open(f'{experiment_dir}/pickles/episode_length.pickle', 'wb'))
+                pickle.dump(rewards, open(f'{experiment_dir}/pickles/rewards.pickle', 'wb'))
 
                 coins_collected.append(0)
                 enemy_coins_collected.append(0)
                 enemy_rewards.append(0)
                 got_killed.append(0)
                 enemies_killed.append(0)
+                rewards.append(0)
 
                 total_state = env.reset()
                 state = state_processor.process(sess, total_state, 1)
@@ -499,13 +505,13 @@ def deep_q_learning(sess,
 step_reward = 1
 dead_reward = 0
 kill_reward = -100
-max_steps = 500
+max_steps = 50000
 selfishness = 1.0
 
 tf.reset_default_graph()
 
 # Where we save our checkpoints and graphs
-experiment_dir = os.path.abspath(f"logs/goomba/version_9.4/maxsteps_{max_steps}/step_reward_{step_reward}/dead_reward_{dead_reward}/kill_reward_{kill_reward}/selfishness_{selfishness}/seed_{seed}")
+experiment_dir = os.path.abspath(f"logs/coinsharing/version_9.4/maxsteps_{max_steps}/step_reward_{step_reward}/dead_reward_{dead_reward}/kill_reward_{kill_reward}/selfishness_{selfishness}/seed_{seed}")
 
 # Create a glboal step variable
 global_step = tf.Variable(0, name='global_step', trainable=False)
@@ -519,7 +525,7 @@ empathic_estimator = Estimator(scope="empathic")
 state_processor = StateProcessor()
 
 
-env = GridworldGoombaGym(headless=True, step_reward=step_reward, dead_reward=dead_reward, kill_reward=kill_reward, max_steps=max_steps, gridworld_size=7, seed=seed)
+env = GridworldCoinSharingGym(headless=True, step_reward=step_reward, dead_reward=dead_reward, kill_reward=kill_reward, max_steps=max_steps, gridworld_size=7, seed=seed)
 
 with tf.Session() as sess:
     sess.run(tf.global_variables_initializer())
