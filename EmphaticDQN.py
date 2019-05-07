@@ -195,6 +195,7 @@ def make_epsilon_greedy_policy(estimator, nA):
     def policy_fn(sess, observation, epsilon):
         A = np.ones(nA, dtype=float) * epsilon / nA
         q_values = estimator.predict(sess, np.expand_dims(observation, 0))[0]
+        print(f'q_values: {q_values}')
         best_action = np.argmax(q_values)
         A[best_action] += (1.0 - epsilon)
         return A
@@ -210,6 +211,7 @@ def deep_q_learning(sess,
                     env,
                     q_estimator,
                     target_estimator,
+                    empathic_estimator,
                     state_processor,
                     num_episodes,
                     experiment_dir,
@@ -297,7 +299,7 @@ def deep_q_learning(sess,
 
     # The policy we're following
     policy = make_epsilon_greedy_policy(
-        q_estimator,
+        empathic_estimator,
         len(VALID_ACTIONS))
 
     # Populate the replay memory with initial experience
@@ -416,23 +418,27 @@ def deep_q_learning(sess,
 
             # Calculate q values and targets (Double DQN)
             q_values_next = q_estimator.predict(sess, next_states_batch[:,:,:,0,:])
-            q_values_enemy_next = q_estimator.predict(sess, next_states_batch[:,:,:,1,:])
+            #q_values_enemy_next = q_estimator.predict(sess, next_states_batch[:,:,:,1,:])
 
-            #q_values_next_total = selfishness*q_values_next + (1-selfishness)*q_values_enemy_next
-            q_values_next_total = q_values_next
+            best_actions = np.argmax(q_values_next, axis=1)
+            #best_enemy_actions = np.argmax(q_values_enemy_next, axis=1)
 
-            best_actions = np.argmax(q_values_next_total, axis=1)
+
             q_values_next_target = target_estimator.predict(sess, next_states_batch[:,:,:,0,:])
-            q_values_enemy_next_target = target_estimator.predict(sess, next_states_batch[:,:,:,1,:])
+            q_values_next_enemy_target = target_estimator.predict(sess, next_states_batch[:,:,:,1,:])
 
             targets_batch = reward_batch + np.invert(done_batch).astype(np.float32) * \
-                            (discount_factor * selfishness * q_values_next_target[np.arange(batch_size), best_actions] + \
-                                discount_factor * (1 - selfishness) * np.mean(q_values_enemy_next_target[np.arange(batch_size), :], axis=1))
+                            (discount_factor * q_values_next_target[np.arange(batch_size), best_actions])
+
+            targets_enemy = discount_factor * np.mean(q_values_next_enemy_target, axis=1)
+
+            targets_empathy = selfishness*targets_batch + (1-selfishness)*targets_enemy
 
             # Perform gradient descent update
             states_batch = np.array(states_batch)
 
             loss1 = q_estimator.update(sess, states_batch[:,:,:,0,:], action_batch, targets_batch)
+            loss2 = empathic_estimator.update(sess, states_batch[:,:,:,0,:], action_batch, targets_empathy)
 
             if done:
                 equality = (2*min(enemy_rewards[-1], stats.episode_rewards[i_episode])) / (enemy_rewards[-1] + stats.episode_rewards[i_episode])
@@ -447,6 +453,7 @@ def deep_q_learning(sess,
                 pickle.dump(enemy_coins_collected, open(f'{experiment_dir}/pickles/enemy_coins_collected.pickle', 'wb'))
                 pickle.dump(got_killed, open(f'{experiment_dir}/pickles/got_killed.pickle', 'wb'))
                 pickle.dump(enemies_killed, open(f'{experiment_dir}/pickles/enemies_killed.pickle', 'wb'))
+                pickle.dump(t, open(f'{experiment_dir}/pickles/episode_length.pickle', 'wb'))
 
                 coins_collected.append(0)
                 enemy_coins_collected.append(0)
@@ -489,16 +496,16 @@ def deep_q_learning(sess,
     return stats
 
 
-step_reward = 1.0
-dead_reward = -100
+step_reward = 0.01
+dead_reward = 0
 kill_reward = -100
-max_steps = 100
+max_steps = 500
 selfishness = 1.0
 
 tf.reset_default_graph()
 
 # Where we save our checkpoints and graphs
-experiment_dir = os.path.abspath(f"logs/goomba/version_8.5/maxsteps_{max_steps}/step_reward_{step_reward}/dead_reward_{dead_reward}/kill_reward_{kill_reward}/selfishness_{selfishness}/seed_{seed}")
+experiment_dir = os.path.abspath(f"logs/goomba/version_9.4/maxsteps_{max_steps}/step_reward_{step_reward}/dead_reward_{dead_reward}/kill_reward_{kill_reward}/selfishness_{selfishness}/seed_{seed}")
 
 # Create a glboal step variable
 global_step = tf.Variable(0, name='global_step', trainable=False)
@@ -506,6 +513,7 @@ global_step = tf.Variable(0, name='global_step', trainable=False)
 # Create estimators
 q_estimator = Estimator(scope="q", summaries_dir=experiment_dir)
 target_estimator = Estimator(scope="target_q")
+empathic_estimator = Estimator(scope="empathic")
 
 # State processor
 state_processor = StateProcessor()
@@ -519,15 +527,16 @@ with tf.Session() as sess:
                                     env,
                                     q_estimator=q_estimator,
                                     target_estimator=target_estimator,
+                                    empathic_estimator=empathic_estimator,
                                     state_processor=state_processor,
                                     experiment_dir=experiment_dir,
-                                    num_episodes=50000,
+                                    num_episodes=20000,
                                     replay_memory_size=500000,
                                     replay_memory_init_size=50000,
                                     update_target_estimator_every=10000,
                                     epsilon_start=1.0,
                                     epsilon_end=0.01,
-                                    epsilon_decay_steps=500000,
+                                    epsilon_decay_steps=1000000,
                                     discount_factor=0.99,
                                     batch_size=32,
                                     selfishness=selfishness):

@@ -171,6 +171,9 @@ class GridworldGoombaGym(gym.Env):
 
         self.observation = self.get_observation()
 
+        if num_enemies_killed > 0:
+            self.observation[:,:,1] = np.zeros((self.window_size,self.window_size))
+
         if dead:
             self.observation = np.dstack([np.zeros((self.window_size, self.window_size)), np.zeros((self.window_size, self.window_size))])
 
@@ -195,7 +198,7 @@ class GridworldGoombaGym(gym.Env):
 
 
 if __name__ == "__main__":
-    env = GridworldGoombaGym(headless=True, gridworld_size=7, window_size=7)
+    env = GridworldGoombaGym(headless=True, gridworld_size=7, window_size=5)
 
 
     while True:
