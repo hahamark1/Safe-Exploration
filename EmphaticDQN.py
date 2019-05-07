@@ -498,20 +498,19 @@ def deep_q_learning(sess,
             episode_rewards=stats.episode_rewards[:i_episode+1],
             episode_kills=stats.episode_kills[:i_episode+1])
 
-    env.monitor.close()
     return stats
 
 
 step_reward = 1
 dead_reward = 0
-kill_reward = -100
-max_steps = 50000
+kill_reward = 0
+max_steps = 500
 selfishness = 1.0
 
 tf.reset_default_graph()
 
 # Where we save our checkpoints and graphs
-experiment_dir = os.path.abspath(f"logs/coinsharing/version_9.4/maxsteps_{max_steps}/step_reward_{step_reward}/dead_reward_{dead_reward}/kill_reward_{kill_reward}/selfishness_{selfishness}/seed_{seed}")
+experiment_dir = os.path.abspath(f"logs/goomba/version_9.6/maxsteps_{max_steps}/step_reward_{step_reward}/dead_reward_{dead_reward}/kill_reward_{kill_reward}/selfishness_{selfishness}/seed_{seed}")
 
 # Create a glboal step variable
 global_step = tf.Variable(0, name='global_step', trainable=False)
@@ -525,7 +524,7 @@ empathic_estimator = Estimator(scope="empathic")
 state_processor = StateProcessor()
 
 
-env = GridworldCoinSharingGym(headless=True, step_reward=step_reward, dead_reward=dead_reward, kill_reward=kill_reward, max_steps=max_steps, gridworld_size=7, seed=seed)
+env = GridworldGoombaGym(headless=True, step_reward=step_reward, dead_reward=dead_reward, kill_reward=kill_reward, max_steps=max_steps, gridworld_size=7, seed=seed)
 
 with tf.Session() as sess:
     sess.run(tf.global_variables_initializer())
@@ -536,7 +535,7 @@ with tf.Session() as sess:
                                     empathic_estimator=empathic_estimator,
                                     state_processor=state_processor,
                                     experiment_dir=experiment_dir,
-                                    num_episodes=20000,
+                                    num_episodes=200000,
                                     replay_memory_size=500000,
                                     replay_memory_init_size=50000,
                                     update_target_estimator_every=10000,
