@@ -25,7 +25,7 @@ WINDOW_LENGTH = 4
 IMAGE_SIZE = 128
 MAX_PIXEL = 255.0
 # MAP_MULTIPLIER = 30.9
-EXPERIMENT_NAME = 'safe_exploration_2.3'
+EXPERIMENT_NAME = 'safe_exploration_2.4'
 
 class StateProcessor():
     """
@@ -89,7 +89,7 @@ class Estimator():
         # Placeholders for our input
         # Our input are WINDOW_LENGTH RGB frames of shape 160, 160 each
         self.X_pl = tf.placeholder(shape=[None, IMAGE_SIZE, IMAGE_SIZE, WINDOW_LENGTH], dtype=tf.uint8, name="X")
-        # The TD target val84, 84ue
+        # The TD target val84,  84ue
         self.y_pl = tf.placeholder(shape=[None], dtype=tf.float32, name="y")
         # Integer id of which action was selected
         self.actions_pl = tf.placeholder(shape=[None], dtype=tf.int32, name="actions")
@@ -108,7 +108,7 @@ class Estimator():
         # Fully connected layers
         flattened = tf.contrib.layers.flatten(conv3)
         fc1 = tf.contrib.layers.fully_connected(flattened, 512)
-        self.predictions = tf.contrib.layers.fully_connected(fc1, len(VALID_ACTIONS))
+        self.predictions = tf.contrib.layers.fully_connected(fc1, len(VALID_ACTIONS), activation_fn=None)
 
         # Get the predictions for the chosen actions only
         gather_indices = tf.range(batch_size) * tf.shape(self.predictions)[1] + self.actions_pl
@@ -363,6 +363,8 @@ def deep_q_learning(sess,
                   resume=True,
                   video_callable=lambda count: count % record_video_every==0)
 
+    total_deaths = 0
+
     for i_episode in range(num_episodes):
 
         # Save the current checkpoint
@@ -427,7 +429,8 @@ def deep_q_learning(sess,
             stats.episode_levels[i_episode] += level_up
 
             if info['death']:
-                stats.episode_total_death[i_episode] += 1
+                total_deaths += 1
+                stats.episode_total_death[i_episode] = total_deaths
 
             # Sample a minibatch from the replay memory
             samples = random.sample(replay_memory, batch_size)
