@@ -175,7 +175,7 @@ class GridworldCoinSharingGym(gym.Env):
         else:
             equality = 1
 
-        reward = coin_collected * (1.1 - self.coins_collected * 0.1) + equality
+        reward = coin_collected * (1.1 - self.coins_collected * 0.1)
         enemy_reward = enemey_coin_collected * (1.1 - self.enemy_coins_collected * 0.1)
 
 
