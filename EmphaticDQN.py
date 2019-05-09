@@ -444,7 +444,7 @@ def deep_q_learning(sess,
             loss2 = empathic_estimator.update(sess, states_batch[:,:,:,0,:], action_batch, targets_empathy)
 
             if done:
-                equality = (2*min(enemy_rewards[-1], stats.episode_rewards[i_episode])) / (enemy_rewards[-1] + stats.episode_rewards[i_episode])
+                equality = (2*min(info['total_enemy_reward'], info['total_reward'])) / (info['total_enemy_reward'] + info['total_reward'])
                 equalities.append(equality)
                 episode_steps.append(t)
                 print(f'enemy_rewards: {enemy_rewards[-1]}, reward: {stats.episode_rewards[i_episode]}, equality: {equality}')
@@ -510,7 +510,7 @@ selfishness = 1.0
 tf.reset_default_graph()
 
 # Where we save our checkpoints and graphs
-experiment_dir = os.path.abspath(f"logs/coinsharing/version_10.3/maxsteps_{max_steps}/step_reward_{step_reward}/dead_reward_{dead_reward}/kill_reward_{kill_reward}/selfishness_{selfishness}/seed_{seed}")
+experiment_dir = os.path.abspath(f"logs/coinsharing/version_10.4/maxsteps_{max_steps}/step_reward_{step_reward}/dead_reward_{dead_reward}/kill_reward_{kill_reward}/selfishness_{selfishness}/seed_{seed}")
 
 # Create a glboal step variable
 global_step = tf.Variable(0, name='global_step', trainable=False)

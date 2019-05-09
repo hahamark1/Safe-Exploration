@@ -182,7 +182,9 @@ class GridworldCoinSharingGym(gym.Env):
 
 
 
-        info = {'got_killed': 0, 'num_killed': 0, 'coins_collected': coin_collected, 'enemy_coins_collected': enemey_coin_collected, 'enemy_reward': enemy_reward}
+        info = {'got_killed': 0, 'num_killed': 0, 'coins_collected': coin_collected,
+                'enemy_coins_collected': enemey_coin_collected, 'enemy_reward': enemy_reward,
+                'total_enemy_reward': total_enemy_rewards_collected, 'total_reward': total_rewards_collected}
 
         restart = len(self.coin_positions) == 0 or self.steps > self.max_steps
 
