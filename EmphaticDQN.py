@@ -23,13 +23,13 @@ from lib import plotting
 from collections import deque, namedtuple
 
 
-seed = 234
+seed = 235
 np.random.seed(seed)
 random.seed(seed)
 
 
 
-VALID_ACTIONS = [0, 1, 2, 3]
+VALID_ACTIONS = [0, 1, 2, 3, 4]
 WINDOW_LENGTH = 1
 INPUT_DIM = 5
 
@@ -505,12 +505,12 @@ step_reward = 1
 dead_reward = 0
 kill_reward = 0
 max_steps = 500
-selfishness = 1.0
+selfishness = 0.25
 
 tf.reset_default_graph()
 
 # Where we save our checkpoints and graphs
-experiment_dir = os.path.abspath(f"logs/goomba/version_9.6/maxsteps_{max_steps}/step_reward_{step_reward}/dead_reward_{dead_reward}/kill_reward_{kill_reward}/selfishness_{selfishness}/seed_{seed}")
+experiment_dir = os.path.abspath(f"logs/goomba/version_10.2/maxsteps_{max_steps}/step_reward_{step_reward}/dead_reward_{dead_reward}/kill_reward_{kill_reward}/selfishness_{selfishness}/seed_{seed}")
 
 # Create a glboal step variable
 global_step = tf.Variable(0, name='global_step', trainable=False)

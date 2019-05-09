@@ -33,7 +33,7 @@ class GridworldGoombaGym(gym.Env):
 
         self.agent_position = [int(self.gridworld_size/2), int(self.gridworld_size/2)]
 
-        self.enemy_positions = [[0,0], [1,3], [6,5]]
+        self.enemy_positions = [[0,0]]
         #self.coin_positions = [[x,y] for y in range(1, self.gridworld_size, 2) for x in range(1, self.gridworld_size, 2)]
         self.coin_positions = []
         self.coins_collected = 0
@@ -116,7 +116,7 @@ class GridworldGoombaGym(gym.Env):
             plt.draw()
             plt.matshow(env, 3, cmap='gray')
             plt.draw()
-            plt.pause(0.1)
+            plt.pause(0.0001)
 
     def step(self, action_num):
 
@@ -136,9 +136,9 @@ class GridworldGoombaGym(gym.Env):
         #move enemies
         for i, pos in enumerate(self.enemy_positions):
             if self.steps % 7 == 0:
-                action = 1
+                action = np.random.choice(range(5))
             else:
-                action = 2
+                action = np.random.choice(range(5))
             #action = np.random.choice(range(4))
             if action == 0:
                 pos = [(pos[0] + 1) % self.gridworld_size, pos[1]]
@@ -154,9 +154,13 @@ class GridworldGoombaGym(gym.Env):
         dead = (self.agent_position in [[x[0] + 1, x[1]] for x in self.enemy_positions]) or (
                 self.agent_position in [[x[0], x[1] + 1] for x in self.enemy_positions]) or (
                        self.agent_position in [[x[0], x[1]] for x in self.enemy_positions]
+                        and action_num not in [0,2]
                )
 
-        num_enemies_killed = self.kill_enemies()
+        if dead:
+            num_enemies_killed = 0
+        else:
+            num_enemies_killed = self.enemies_to_be_killed()
 
 
 
@@ -175,7 +179,10 @@ class GridworldGoombaGym(gym.Env):
             self.observation[:,:,1] = np.zeros((self.window_size,self.window_size))
 
         if dead:
-            self.observation = np.dstack([np.zeros((self.window_size, self.window_size)), np.zeros((self.window_size, self.window_size))])
+            self.observation[:,:,0] = np.zeros((self.window_size, self.window_size))
+
+
+        self.kill_enemies()
 
         if restart:
             self.reset()
@@ -191,6 +198,12 @@ class GridworldGoombaGym(gym.Env):
         self.enemy_positions = [x for x in self.enemy_positions if x not in enemies_to_be_killed]
         return len(enemies_to_be_killed)
 
+    def enemies_to_be_killed(self):
+        enemies_to_be_killed = []
+        for enemy_pos in self.enemy_positions:
+            if enemy_pos == [self.agent_position[0] +1, self.agent_position[1]] or enemy_pos == [self.agent_position[0], self.agent_position[1] + 1]:
+                enemies_to_be_killed.append(enemy_pos)
+        return len(enemies_to_be_killed)
 
     def render(self, mode='human', close=False):
         pass
@@ -198,9 +211,9 @@ class GridworldGoombaGym(gym.Env):
 
 
 if __name__ == "__main__":
-    env = GridworldGoombaGym(headless=True, gridworld_size=7, window_size=5)
+    env = GridworldGoombaGym(headless=False, gridworld_size=7, window_size=5, seed=3)
 
 
     while True:
-        action = np.random.choice(range(8))
+        action = np.random.choice(range(5))
         env.step(action)
