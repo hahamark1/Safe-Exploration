@@ -504,7 +504,7 @@ def deep_q_learning(sess,
 step_reward = 1
 dead_reward = 0
 kill_reward = 0
-max_steps = 50000
+max_steps = 500
 selfishness = 1.0
 
 tf.reset_default_graph()
