@@ -169,7 +169,7 @@ class GridworldGoombaGym(gym.Env):
 
         reward = self.step_reward + self.kill_reward*num_enemies_killed + self.dead_reward*dead
 
-        info = {'got_killed': dead, 'num_killed': num_enemies_killed, 'coins_collected': 0, 'enemy_coins_collected': 0, 'enemy_reward': 0}
+        info = {'got_killed': dead, 'num_killed': num_enemies_killed, 'coins_collected': 0, 'enemy_coins_collected': 0, 'enemy_reward': 0, 'total_reward': 1, 'total_enemy_reward': 1}
 
         restart = dead or self.steps > self.max_steps
 
