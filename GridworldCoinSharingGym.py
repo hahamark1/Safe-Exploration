@@ -167,15 +167,20 @@ class GridworldCoinSharingGym(gym.Env):
                 self.plot_env()
 
 
-        total_rewards_collected = np.sum([(1.1 - x * 0.1) for x in range(self.coins_collected)])
-        total_enemy_rewards_collected = np.sum([(1.1 - x * 0.1) for x in range(self.enemy_coins_collected)])
+        #total_rewards_collected = np.sum([(1.1 - x * 0.1) for x in range(self.coins_collected)])
+        #total_enemy_rewards_collected = np.sum([(1.1 - x * 0.1) for x in range(self.enemy_coins_collected)])
 
-        if total_enemy_rewards_collected > 0 or total_enemy_rewards_collected > 0:
-            equality = (2*min(total_rewards_collected, total_enemy_rewards_collected)) / (total_rewards_collected + total_enemy_rewards_collected)
+        # if total_enemy_rewards_collected > 0 or total_enemy_rewards_collected > 0:
+        #     equality = (2*min(total_rewards_collected, total_enemy_rewards_collected)) / (total_rewards_collected + total_enemy_rewards_collected)
+        # else:
+        #     equality = 1
+
+        if self.coins_collected - self.enemy_coins_collected > 2:
+            not_too_many_coins = False
         else:
-            equality = 1
+            not_too_many_coins = True
 
-        reward = coin_collected * (1.1 - self.coins_collected * 0.1)
+        reward = coin_collected * not_too_many_coins * (1.1 - self.coins_collected * 0.1)
         enemy_reward = enemey_coin_collected * (1.1 - self.enemy_coins_collected * 0.1)
 
 
@@ -184,7 +189,7 @@ class GridworldCoinSharingGym(gym.Env):
 
         info = {'got_killed': 0, 'num_killed': 0, 'coins_collected': coin_collected,
                 'enemy_coins_collected': enemey_coin_collected, 'enemy_reward': enemy_reward,
-                'total_enemy_reward': total_enemy_rewards_collected, 'total_reward': total_rewards_collected}
+                'total_enemy_reward': 0, 'total_reward': 0}
 
         restart = len(self.coin_positions) == 0 or self.steps > self.max_steps
 
