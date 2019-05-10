@@ -510,7 +510,7 @@ selfishness = 1.0
 tf.reset_default_graph()
 
 # Where we save our checkpoints and graphs
-experiment_dir = os.path.abspath(f"logs/coinsharing/version_11.1/maxsteps_{max_steps}/step_reward_{step_reward}/dead_reward_{dead_reward}/kill_reward_{kill_reward}/selfishness_{selfishness}/seed_{seed}")
+experiment_dir = os.path.abspath(f"logs/coinsharing/version_11.2/maxsteps_{max_steps}/step_reward_{step_reward}/dead_reward_{dead_reward}/kill_reward_{kill_reward}/selfishness_{selfishness}/seed_{seed}")
 
 # Create a glboal step variable
 global_step = tf.Variable(0, name='global_step', trainable=False)
