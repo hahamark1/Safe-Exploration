@@ -175,7 +175,7 @@ class GridworldCoinSharingGym(gym.Env):
         # else:
         #     equality = 1
 
-        if self.coins_collected - self.enemy_coins_collected > 2:
+        if self.coins_collected - self.enemy_coins_collected >= 2:
             not_too_many_coins = False
         else:
             not_too_many_coins = True
