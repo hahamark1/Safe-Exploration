@@ -1,6 +1,6 @@
 {
     "id":0,
-    "length":15,
+    "length":18,
     "level":{
         "objects":[
             {
@@ -60,7 +60,7 @@
                 {
                 "name":"coin",
                 "positions":[
-                    [17,12], [11,12]
+                    [17,12]
                 ]}
 
         ]

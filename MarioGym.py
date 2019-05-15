@@ -48,7 +48,7 @@ class MarioGym(gym.Env):
 
         self.init_game()
         self.reset(levelname = self.levelname)
-        self.coin_name = 'Coin' if self.headless else 'CoinHeadless'
+        self.coin_name = 'Coin' if not self.headless else 'CoinHeadless'
 
     def reset(self, levelname=None):
         if not levelname:
@@ -106,7 +106,6 @@ class MarioGym(gym.Env):
         info = {'num_killed': goombas_died,
                 'coins_taken': coins_taken,
                 'death': self.mario.restart}
-
 
         if self.mario.restart:
             reward -= HOLE_REWARD
