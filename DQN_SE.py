@@ -25,7 +25,7 @@ WINDOW_LENGTH = 4
 IMAGE_SIZE = 128
 MAX_PIXEL = 255.0
 # MAP_MULTIPLIER = 30.9
-EXPERIMENT_NAME = 'safe_exploration_3.1'
+EXPERIMENT_NAME = 'safe_exploration_3.2'
 
 class StateProcessor():
     """
