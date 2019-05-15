@@ -19,6 +19,7 @@ import matplotlib.pyplot as plt
 from gym.utils import seeding
 
 EPISODE_LENGTH = 800
+
 HOLE_REWARD = 5
 COIN_REWARD = 1
 MOVES = ['moveLeft', 'moveRight', 'jump', 'jumpLeft', 'jumpRight', 'doNothing']
@@ -47,6 +48,7 @@ class MarioGym(gym.Env):
 
         self.init_game()
         self.reset(levelname = self.levelname)
+        self.coin_name = 'Coin' if self.headless else 'CoinHeadless'
 
     def reset(self, levelname=None):
         if not levelname:
@@ -82,7 +84,7 @@ class MarioGym(gym.Env):
                               and x.alive)])
 
         coins = len([x for x in self.level.entityList
-                          if ((x.__class__.__name__ == 'Coin'))])
+                          if ((x.__class__.__name__ == self.coin_name))])
 
         old_x_pos = self.mario.rect.x / (10 * MAP_MULTIPLIER)
 
@@ -94,10 +96,10 @@ class MarioGym(gym.Env):
                               or x.__class__.__name__ == 'GoombaHeadless')
                               and x.alive)])
 
-        coins_taken = coins - len([x for x in self.level.entityList if ((x.__class__.__name__ == 'Coin'))])
+        coins_taken = coins - len([x for x in self.level.entityList if ((x.__class__.__name__ == self.coin_name))])
 
         coins_left = len([x for x in self.level.entityList
-                          if ((x.__class__.__name__ == 'Coin'))])
+                          if ((x.__class__.__name__ == self.coin_name))])
 
         self.observation = self.level_to_numpy()
         # print(coins_taken)
