@@ -430,7 +430,7 @@ def deep_q_learning(sess,
 
             if info['death']:
                 total_deaths += 1
-                stats.episode_total_death[i_episode] = total_deaths
+            stats.episode_total_death[i_episode] = total_deaths
 
             # Sample a minibatch from the replay memory
             samples = random.sample(replay_memory, batch_size)
