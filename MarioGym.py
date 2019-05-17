@@ -169,17 +169,8 @@ class MarioGym(gym.Env):
                 self.clock += (1.0 / 60.0)
                 self.score = self.level.points
 
-
-
-            #reward = 0.001 * (self.score - start_score + deadbonus)
-
             reward += coins - self.return_coins()
-        # print('The current reward is: {}'.format(reward))
-        # print('The extra bonus is: {}'.format(self.mario.rect.x/MAP_MULTIPLIER))
 
-            # if reward > 0:
-                # print('He found a coin!!!')
-                # print(reward)
         return COIN_REWARD * reward
 
     def level_to_numpy(self):
@@ -197,7 +188,7 @@ class MarioGym(gym.Env):
             x_axis = int(round(entity.rect.x / granularity))
             if entity.__class__.__name__ == 'Koopa' or entity.__class__.__name__ == 'Goomba' or entity.__class__.__name__ == 'GoombaHeadless':
                 array[y_axis: y_axis + granularity, x_axis: x_axis + granularity] = 1
-            elif entity.__class__.__name__ == 'Coin' or entity.__class__.__name__ == 'CoindHeadless':
+            elif entity.__class__.__name__ == 'Coin' or entity.__class__.__name__ == 'CoinHeadless':
                 array[y_axis: y_axis + granularity, x_axis: x_axis + granularity] = 2
             elif entity.__class__.__name__ == 'RandomBox':
                 if not entity.triggered:
@@ -212,10 +203,13 @@ class MarioGym(gym.Env):
         # array_v2 = np.hstack((np.zeros((level_size, padding)), array))
         # array_v2 = np.vstack((np.zeros((padding, level_size+padding)), array))
         #
-        x1 = max(0, int(round(self.mario.rect.y / granularity)))
-        x2 = max(0, int(round(self.mario.rect.y / granularity))) + 2 * padding
-        x3 = int(round(self.mario.rect.x / granularity))
-        x4 = int(round(self.mario.rect.x / granularity)) + 2 * padding
+
+        left_paddding = int(round(self.mario.rect.y / granularity))
+        upper_padding  = int(round(self.mario.rect.x / granularity))
+        x1 = max(0, int(round(self.mario.rect.y / granularity)) - min(left_paddding, padding))
+        x2 = max(0, int(round(self.mario.rect.y / granularity)) + (2 * padding - min(left_paddding, padding)))
+        x3 = int(round(self.mario.rect.x / granularity)) - min(upper_padding, padding)
+        x4 = int(round(self.mario.rect.x / granularity)) + (2 * padding - min(upper_padding, padding))
 
         numpy_frame = array[x1: x2, x3: x4]
 
