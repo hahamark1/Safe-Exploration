@@ -28,9 +28,8 @@ CONV_2 = 16
 CONV_3 = 16
 MAX_PIXEL = 255.0
 # MAP_MULTIPLIER = 30.9
-EXPERIMENT_NAME = 'safe_exploration_3.5'
-EXPERIMENT_NAME = 'safe_exploration_4.0'
-HEADLESS = True
+EXPERIMENT_NAME = 'safe_exploration_4.1'
+HEADLESS = False
 LEVEL_NAME = 'Level-basic-zero-hole.json'
 
 env = MarioGym(headless=HEADLESS, level_name=LEVEL_NAME)
@@ -333,7 +332,7 @@ def deep_q_learning(sess,
 
     # Populate the replay memory with initial experience
     print("Populating replay memory...")
-    total_state = env.reset(levelname='Level-basic-one-hole.json')
+    total_state = env.reset(levelname=LEVEL_NAME)
     state = state_processor.process(sess, total_state, 1)
     state = np.stack([state] * WINDOW_LENGTH, axis=2)
 
@@ -356,7 +355,7 @@ def deep_q_learning(sess,
 
         replay_memory.append(Transition(total_state, action, reward, next_total_state, done))
         if done:
-            total_state = env.reset(levelname='Level-basic-one-hole.json')
+            total_state = env.reset(levelname=LEVEL_NAME)
             state = state_processor.process(sess, total_state, 1)
 
             state = np.stack([state] * WINDOW_LENGTH, axis=2)
