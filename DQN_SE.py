@@ -29,7 +29,7 @@ CONV_3 = 16
 MAX_PIXEL = 255.0
 # MAP_MULTIPLIER = 30.9
 EXPERIMENT_NAME = 'safe_exploration_4.1'
-HEADLESS = True 
+HEADLESS = True
 LEVEL_NAME = 'Level-basic-zero-hole.json'
 
 env = MarioGym(headless=HEADLESS, level_name=LEVEL_NAME)
@@ -380,7 +380,7 @@ def deep_q_learning(sess,
         saver.save(tf.get_default_session(), checkpoint_path)
 
         # Reset the environment
-        total_state = env.reset(levelname='Level-basic-one-hole.json')
+        total_state = env.reset(levelname=LEVEL_NAME)
         state = state_processor.process(sess, total_state, 1)
         state = np.stack([state] * WINDOW_LENGTH, axis=2)
         total_state = np.stack([state], axis=2)
