@@ -17,15 +17,23 @@ from collections import deque, namedtuple
 import matplotlib.pyplot as plt
 import numpy as np
 
-env = MarioGym(headless=True, level_name='Level-basic-one-hole.json')
+
 
 # Atari Actions: 0 (noop), 1 (fire), 2 (left) and 3 (rig)
 VALID_ACTIONS = [0, 1, 2, 3,4 ,5 ]
 WINDOW_LENGTH = 4
-IMAGE_SIZE = 128
+IMAGE_SIZE = 32
+CONV_1 = 8
+CONV_2 = 16
+CONV_3 = 16
 MAX_PIXEL = 255.0
 # MAP_MULTIPLIER = 30.9
-EXPERIMENT_NAME = 'safe_exploration_3.4'
+EXPERIMENT_NAME = 'safe_exploration_4.0'
+HEADLESS = False
+LEVEL_NAME = 'Level-basic-zero-hole.json'
+
+env = MarioGym(headless=HEADLESS, level_name=LEVEL_NAME)
+
 
 class StateProcessor():
     """
@@ -99,11 +107,11 @@ class Estimator():
 
         # Three convolutional layers
         conv1 = tf.contrib.layers.conv2d(
-            X, 32, 8, 4, activation_fn=tf.nn.relu)
+            X, CONV_1, 8, 4, activation_fn=tf.nn.relu)
         conv2 = tf.contrib.layers.conv2d(
-            conv1, 64, 4, 2, activation_fn=tf.nn.relu)
+            conv1, CONV_2, 4, 2, activation_fn=tf.nn.relu)
         conv3 = tf.contrib.layers.conv2d(
-            conv2, 64, 3, 1, activation_fn=tf.nn.relu)
+            conv2, CONV_3, 3, 1, activation_fn=tf.nn.relu)
 
         # Fully connected layers
         flattened = tf.contrib.layers.flatten(conv3)
@@ -336,6 +344,7 @@ def deep_q_learning(sess,
     for i in range(replay_memory_init_size):
         action_probs = policy(sess, state, epsilons[min(total_t, epsilon_decay_steps-1)])
         action = np.random.choice(np.arange(len(action_probs)), p=action_probs)
+
 
         next_total_state, reward, done, info = env.step(VALID_ACTIONS[action])
         next_state = state_processor.process(sess, next_total_state, 1)
