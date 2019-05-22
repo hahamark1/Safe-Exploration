@@ -30,7 +30,7 @@ MAX_PIXEL = 255.0
 # MAP_MULTIPLIER = 30.9
 EXPERIMENT_NAME = 'safe_exploration_3.5'
 EXPERIMENT_NAME = 'safe_exploration_4.0'
-HEADLESS = False
+HEADLESS = True
 LEVEL_NAME = 'Level-basic-zero-hole.json'
 
 env = MarioGym(headless=HEADLESS, level_name=LEVEL_NAME)
