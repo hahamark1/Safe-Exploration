@@ -22,13 +22,13 @@ import numpy as np
 # Atari Actions: 0 (noop), 1 (fire), 2 (left) and 3 (rig)
 VALID_ACTIONS = [0, 1, 2, 3,4 ,5 ]
 WINDOW_LENGTH = 4
-IMAGE_SIZE = 32
+IMAGE_SIZE = 128
 CONV_1 = 8
 CONV_2 = 16
 CONV_3 = 16
 MAX_PIXEL = 255.0
 # MAP_MULTIPLIER = 30.9
-EXPERIMENT_NAME = 'safe_exploration_4.2'
+EXPERIMENT_NAME = 'safe_exploration_4.3'
 HEADLESS = True
 LEVEL_NAME = 'Level-basic-one-hole.json'
 
