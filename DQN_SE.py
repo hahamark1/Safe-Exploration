@@ -31,6 +31,7 @@ MAX_PIXEL = 255.0
 EXPERIMENT_NAME = 'safe_exploration_4.3'
 HEADLESS = True
 LEVEL_NAME = 'Level-basic-one-hole.json'
+ER_SIZE = 100000000
 
 env = MarioGym(headless=HEADLESS, level_name=LEVEL_NAME)
 
@@ -525,7 +526,7 @@ with tf.Session() as sess:
                                     state_processor=state_processor,
                                     experiment_dir=experiment_dir,
                                     num_episodes=100000,
-                                    replay_memory_size=500000,
+                                    replay_memory_size=ER_SIZE,
                                     replay_memory_init_size=10000,
                                     update_target_estimator_every=10000,
                                     epsilon_start=1.0,
