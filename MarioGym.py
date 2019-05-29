@@ -195,12 +195,32 @@ class MarioGym(gym.Env):
                     array[y_axis: y_axis + granularity, x_axis: x_axis + granularity] = 3
                 else:
                     array[y_axis: y_axis + granularity, x_axis: x_axis + granularity] = 4
+        ground_tiles = set()
+        ground_start = 1000
+        ground_end = 0
         for ground in self.level.groundList:
             y_axis = int(round(32*ground[1] / granularity))
             x_axis = int(round(32*ground[0] / granularity))
             array[y_axis: y_axis + granularity, x_axis: x_axis + granularity] = 5
 
-        # array_v2 = np.hstack((np.zeros((level_size, padding)), array))
+            ground_tiles.add(ground[0])
+            if ground[0] == 30:
+                if ground[1] > ground_end:
+                    ground_end = ground[1]
+                if ground[1] < ground_start:
+                    ground_start = ground[1]
+
+        hole_values = missing_elements(list(ground_tiles))
+        ground_size = ground_end - ground_start
+
+        for hole_x in hole_values:
+            x_axis = int(round(32 * hole_x / granularity))
+            y_axis = int(round(32 * ground_start / granularity))
+            array[y_axis: y_axis +  ground_size * granularity, x_axis: x_axis +  granularity] = -5
+
+
+
+        # array_v2 = np.hstack((np.zeros((level_size, paddin<g)), array))
         # array_v2 = np.vstack((np.zeros((padding, level_size+padding)), array))
         #
 
@@ -243,7 +263,7 @@ class MarioGym(gym.Env):
         mario_pos = [int(round(self.mario.rect.y/granularity)), int(round(self.mario.rect.x/granularity))]
 
         mario_representation = 128
-        ground_representaion = 64
+        ground_representation = 64
         array[mario_pos[0]][mario_pos[1]] = mario_representation
 
         closest_enemy = None
@@ -266,7 +286,7 @@ class MarioGym(gym.Env):
             #     else:
             #         array[int(round(entity.rect.y / granularity))][int(round(entity.rect.x / granularity))] = 4
         for ground in self.level.groundList:
-            array[int(round(32*ground[1] / granularity))][int(round(32*ground[0] / granularity))] = ground_representaion
+            array[int(round(32*ground[1] / granularity))][int(round(32*ground[0] / granularity))] = ground_representation
 
         array = np.hstack((np.zeros((level_size, padding)), array))
         array = np.vstack((np.zeros((padding, level_size+padding)), array))
@@ -317,6 +337,10 @@ class MarioGym(gym.Env):
             self.mario.traits['jumpTrait'].start()
         elif move == 'doNothing':
             self.mario.traits['goTrait'].direction = 0
+
+def missing_elements(L):
+    start, end = L[0], L[-1]
+    return sorted(set(range(start, end + 1)).difference(L))
 
 if __name__ == "__main__":
     env = MarioGym(headless=False)
