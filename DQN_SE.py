@@ -28,7 +28,7 @@ CONV_2 = 16
 CONV_3 = 16
 MAX_PIXEL = 255.0
 # MAP_MULTIPLIER = 30.9
-EXPERIMENT_NAME = 'safe_exploration_4.5'
+EXPERIMENT_NAME = 'safe_exploration_5.1'
 HEADLESS = True
 LEVEL_NAME = 'Level-basic-one-hole.json'
 ER_SIZE = 100000000
@@ -218,8 +218,35 @@ def make_epsilon_greedy_policy(estimator, nA):
     def policy_fn(sess, observation, epsilon):
         A = np.ones(nA, dtype=float) * epsilon / nA
         q_values = estimator.predict(sess, np.expand_dims(observation, 0))[0]
+
         best_action = np.argmax(q_values)
         A[best_action] += (1.0 - epsilon)
+        return A
+    return policy_fn
+
+def softmax(x, t=1):
+    """Compute softmax values for each sets of scores in x.
+
+    """
+    e_x = np.exp(x - np.max(x))
+    return (e_x/t) / ((e_x/t).sum(axis=0))
+
+def make_boltzmann_policy(estimator, nA, temperature=1):
+    """
+    Creates an boltzman policy based on a given Q-function approximator and epsilon.
+
+    Args:
+        estimator: An estimator that returns q values for a given state
+        nA: Number of actions in the environment.
+
+    Returns:
+        A function that takes the (sess, observation, epsilon) as an argument and returns
+        the probabilities for each action in the form of a numpy array of length nA.
+
+    """
+    def policy_fn(sess, observation, epsilon):
+        q_values = estimator.predict(sess, np.expand_dims(observation, 0))[0]
+        A = softmax(q_values, temperature)
         return A
     return policy_fn
 
@@ -327,7 +354,7 @@ def deep_q_learning(sess,
     epsilons = np.linspace(epsilon_start, epsilon_end, epsilon_decay_steps)
 
     # The policy we're following
-    policy = make_epsilon_greedy_policy(
+    policy = make_boltzmann_policy(
         q_estimator,
         len(VALID_ACTIONS))
 
