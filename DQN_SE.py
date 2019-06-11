@@ -245,6 +245,7 @@ def make_boltzmann_policy(estimator, nA, temperature=1):
 
     """
     def policy_fn(sess, observation, epsilon):
+
         q_values = estimator.predict(sess, np.expand_dims(observation, 0))[0]
         A = softmax(q_values, temperature)
         return A
@@ -528,39 +529,40 @@ def deep_q_learning(sess,
     env.monitor.close()
     return stats
 
+if __name__ == "__main__":
 
-tf.reset_default_graph()
+    tf.reset_default_graph()
 
-# Where we save our checkpoints and graphs
-experiment_dir = os.path.abspath("./experiments/{}".format(EXPERIMENT_NAME))
+    # Where we save our checkpoints and graphs
+    experiment_dir = os.path.abspath("./experiments/{}".format(EXPERIMENT_NAME))
 
-# Create a glboal step variable
-global_step = tf.Variable(0, name='global_step', trainable=False)
+    # Create a glboal step variable
+    global_step = tf.Variable(0, name='global_step', trainable=False)
 
-# Create estimators
-q_estimator = Estimator(scope="q", summaries_dir=experiment_dir)
-target_estimator = Estimator(scope="target_q")
+    # Create estimators
+    q_estimator = Estimator(scope="q", summaries_dir=experiment_dir)
+    target_estimator = Estimator(scope="target_q")
 
-# State processor
-state_processor = StateProcessor()
+    # State processor
+    state_processor = StateProcessor()
 
-with tf.Session() as sess:
-    sess.run(tf.global_variables_initializer())
-    for t, stats in deep_q_learning(sess,
-                                    env,
-                                    q_estimator=q_estimator,
-                                    target_estimator=target_estimator,
-                                    state_processor=state_processor,
-                                    experiment_dir=experiment_dir,
-                                    num_episodes=100000,
-                                    replay_memory_size=ER_SIZE,
-                                    replay_memory_init_size=10000,
-                                    update_target_estimator_every=10000,
-                                    epsilon_start=1.0,
-                                    epsilon_end=0.1,
-                                    epsilon_decay_steps=500000,
-                                    discount_factor=0.99,
-                                    batch_size=32,
-                                    selfishness=1.0):
+    with tf.Session() as sess:
+        sess.run(tf.global_variables_initializer())
+        for t, stats in deep_q_learning(sess,
+                                        env,
+                                        q_estimator=q_estimator,
+                                        target_estimator=target_estimator,
+                                        state_processor=state_processor,
+                                        experiment_dir=experiment_dir,
+                                        num_episodes=100000,
+                                        replay_memory_size=ER_SIZE,
+                                        replay_memory_init_size=10000,
+                                        update_target_estimator_every=10000,
+                                        epsilon_start=1.0,
+                                        epsilon_end=0.1,
+                                        epsilon_decay_steps=500000,
+                                        discount_factor=0.99,
+                                        batch_size=32,
+                                        selfishness=1.0):
 
-        print("\nEpisode Reward: {}".format(stats.episode_rewards[-1]))
+            print("\nEpisode Reward: {}".format(stats.episode_rewards[-1]))

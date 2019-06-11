@@ -356,7 +356,7 @@ def deep_q_learning(sess,
         # Reset the environment
         total_state = env.reset()
         state = state_processor.process(sess, total_state, 1)
-        enemy_state = state_processor.process(sess, total_state, 2)
+        enemy_state = state_processor.process(sess, total_state, Okee
 
         state = np.stack([state] * WINDOW_LENGTH, axis=2)
         enemy_state = np.stack([enemy_state] * WINDOW_LENGTH, axis=2)

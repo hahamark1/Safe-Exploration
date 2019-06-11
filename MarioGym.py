@@ -18,22 +18,24 @@ from gym import spaces
 import matplotlib.pyplot as plt
 from gym.utils import seeding
 
-EPISODE_LENGTH = 800
+EPISODE_LENGTH = 1500
 
 HOLE_REWARD = 5
+
 COIN_REWARD = 1
 MOVES = ['moveLeft', 'moveRight', 'jump', 'jumpLeft', 'jumpRight', 'doNothing']
 MAP_MULTIPLIER = 30.9
 
 class MarioGym(gym.Env):
 
-    def __init__(self, headless=True, level_name='Level-basic-one-goomba.json', no_coins=5):
+    def __init__(self, headless=True, level_name='Level-basic-one-goomba.json', no_coins=5, step_size=5):
         self.action_space = spaces.Discrete(6)
         self.observation_space = spaces.Box(low=-10000000, high=100000000, dtype=np.float, shape=(40, 80, 4))
 
         self.levelname = level_name
         self.headless = headless
         self.score = 0
+        self.step_size = step_size
         self.max_frame_rate = 60
         self.steps = 0
         self.observation = None
@@ -118,6 +120,10 @@ class MarioGym(gym.Env):
     def render(self, mode='human', close=False):
         pass
 
+    def get_screen(self):
+
+        return self.screen
+
     def init_game(self, y_position=0, coins=0, points=0, time=0, clock=0):
         if not self.headless:
             pygame.mixer.pre_init(44100, -16, 2, 4096)
@@ -150,7 +156,7 @@ class MarioGym(gym.Env):
 
         counter = 0
         reward = 0
-        while counter < 5:
+        while counter < self.step_size:
             counter += 1
             coins = self.return_coins()
             self.do_move(move)

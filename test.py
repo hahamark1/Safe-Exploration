@@ -1,5 +1,7 @@
 from MarioGym import MarioGym
 import matplotlib.pyplot as plt
+import random
+
 
 # Get the environment and extract the number of actions.
 env = MarioGym(headless=False, level_name='Level-basic-one-hole.json', no_coins=5)
@@ -8,7 +10,6 @@ restart = False
 plt.ion()
 
 map_length = env.level.levelLength
-print(map_length)
 counter = 0
 while True:
 
@@ -16,11 +17,10 @@ while True:
     if restart:
         env.reset(levelname='Level-basic-one-hole.json')
 
-    obs = env.level_to_supersimple_numpy()
-    nummy = env.level_to_numpy()
-    # err
-
     obs, reward, restart, info = env.step(1)
+
+    count += 0
+    # obs, reward, restart, info = env.step(random.randint(0,4))
     # # print("\nThe current x position is {}, which is smaller than {}".format(env.mario.rect.x, 33 * env.level.levelLength))
     # if env.mario.rect.x > 30.9*map_length:
     #     print("\nThe current x position is {}, which is larger than {}".format(env.mario.rect.x,
