@@ -1,0 +1,7 @@
+traits/*
+__pycache__/*
+.idea/*
+
+*.pyc
+*.deb
+experiments*

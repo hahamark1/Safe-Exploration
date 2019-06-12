@@ -28,9 +28,12 @@ CONV_2 = 16
 CONV_3 = 16
 MAX_PIXEL = 255.0
 # MAP_MULTIPLIER = 30.9
-EXPERIMENT_NAME = 'safe_exploration_5.2'
+# EXPERIMENT_NAME = 'safe_exploration_5.2'
+EXPERIMENT_NAME = 'safe_exploration_5.3'
+# EXPERIMENT_NAME = 'safe_exploration_5.4'
 HEADLESS = True
-LEVEL_NAME = 'Level-basic-one-hole.json'
+# LEVEL_NAME = 'Level-basic-one-hole.json'
+LEVEL_NAME = 'Level-basic-one-hole-three-coins.json'
 ER_SIZE = 100000000
 PARTIAL_OBSERVATION = False
 

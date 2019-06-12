@@ -30,7 +30,7 @@ MAP_WIDTH=80
 
 class MarioGym(gym.Env):
 
-    def __init__(self, headless=True, level_name='Level-basic-one-goomba.json', no_coins=5, step_size=5, partial_observation=False):
+    def __init__(self, headless=True, level_name='Level-basic-one-goomba.json', no_coins=5, step_size=5, partial_observation=False, distance_reward=False):
         self.action_space = spaces.Discrete(6)
         self.observation_space = spaces.Box(low=-10000000, high=100000000, dtype=np.float, shape=(40, 80, 4))
 
@@ -50,6 +50,7 @@ class MarioGym(gym.Env):
         self.partial_observation = partial_observation
         self.no_coins = no_coins
         self.coins_start = self.no_coins
+        self.distance_reward = distance_reward
 
         self.init_game()
         self.reset(levelname = self.levelname)
@@ -64,6 +65,7 @@ class MarioGym(gym.Env):
         self.init_game()
         self.steps = 0
         self.observation = self.level_to_numpy()
+        self.max_dist = 0
         return self.observation
 
     def reset_clean(self, y_pos):
@@ -94,7 +96,9 @@ class MarioGym(gym.Env):
         old_x_pos = self.mario.rect.x / (10 * MAP_MULTIPLIER)
 
         reward = self.do_game_step(action)
-        coins_taken = reward/COIN_REWARD
+
+        if self.distance_reward:
+            reward += old_x_pos/1.7
 
         goombas_died = num_goombas - len([x for x in self.level.entityList
                           if ((x.__class__.__name__ == 'Goomba'
