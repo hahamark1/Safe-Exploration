@@ -356,7 +356,7 @@ def deep_q_learning(sess,
     epsilons = np.linspace(epsilon_start, epsilon_end, epsilon_decay_steps)
 
     # The policy we're following
-    policy = make_boltzmann_policy(
+    policy = make_epsilon_greedy_policy(
         q_estimator,
         len(VALID_ACTIONS))
 
