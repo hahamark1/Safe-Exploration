@@ -6,7 +6,7 @@ import os
 import random
 import sys
 
-from MarioGym import MarioGym, MAP_MULTIPLIER
+from MarioGym import MarioGym, MAP_MULTIPLIER, MAP_WIDTH, MAP_HEIGHT
 import tensorflow as tf
 
 if "../" not in sys.path:
@@ -44,7 +44,7 @@ class StateProcessor():
     def __init__(self):
         # Build the Tensorflow graph
         with tf.variable_scope("state_processor"):
-            self.input_state = tf.placeholder(shape=[64, 64], dtype=tf.uint8)
+            self.input_state = tf.placeholder(shape=[MAP_HEIGHT, MAP_WIDTH], dtype=tf.uint8)
 
             self.output1 = tf.expand_dims(self.input_state[:,:], 2)
 
