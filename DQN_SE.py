@@ -28,12 +28,13 @@ CONV_2 = 16
 CONV_3 = 16
 MAX_PIXEL = 255.0
 # MAP_MULTIPLIER = 30.9
-EXPERIMENT_NAME = 'safe_exploration_5.1'
+EXPERIMENT_NAME = 'safe_exploration_5.2'
 HEADLESS = True
 LEVEL_NAME = 'Level-basic-one-hole.json'
 ER_SIZE = 100000000
+PARTIAL_OBSERVATION = False
 
-env = MarioGym(headless=HEADLESS, level_name=LEVEL_NAME)
+env = MarioGym(headless=HEADLESS, level_name=LEVEL_NAME, partial_observation=PARTIAL_OBSERVATION)
 
 
 class StateProcessor():

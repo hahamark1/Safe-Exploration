@@ -20,15 +20,17 @@ from gym.utils import seeding
 
 EPISODE_LENGTH = 1500
 
-HOLE_REWARD = 5
+HOLE_REWARD = 1
 
 COIN_REWARD = 1
 MOVES = ['moveLeft', 'moveRight', 'jump', 'jumpLeft', 'jumpRight', 'doNothing']
 MAP_MULTIPLIER = 30.9
+MAP_HEIGHT = 72
+MAP_WIDTH=80
 
 class MarioGym(gym.Env):
 
-    def __init__(self, headless=True, level_name='Level-basic-one-goomba.json', no_coins=5, step_size=5):
+    def __init__(self, headless=True, level_name='Level-basic-one-goomba.json', no_coins=5, step_size=5, partial_observation=False):
         self.action_space = spaces.Discrete(6)
         self.observation_space = spaces.Box(low=-10000000, high=100000000, dtype=np.float, shape=(40, 80, 4))
 
@@ -45,6 +47,7 @@ class MarioGym(gym.Env):
         self.dashboard = None
         self.sound = None
         self.menu = None
+        self.partial_observation = partial_observation
         self.no_coins = no_coins
         self.coins_start = self.no_coins
 
@@ -229,15 +232,17 @@ class MarioGym(gym.Env):
         # array_v2 = np.hstack((np.zeros((level_size, paddin<g)), array))
         # array_v2 = np.vstack((np.zeros((padding, level_size+padding)), array))
         #
+        if self.partial_observation:
+            left_paddding = int(round(self.mario.rect.y / granularity))
+            upper_padding  = int(round(self.mario.rect.x / granularity))
+            x1 = max(0, int(round(self.mario.rect.y / granularity)) - min(left_paddding, padding))
+            x2 = max(0, int(round(self.mario.rect.y / granularity)) + (2 * padding - min(left_paddding, padding)))
+            x3 = int(round(self.mario.rect.x / granularity)) - min(upper_padding, padding)
+            x4 = int(round(self.mario.rect.x / granularity)) + (2 * padding - min(upper_padding, padding))
 
-        left_paddding = int(round(self.mario.rect.y / granularity))
-        upper_padding  = int(round(self.mario.rect.x / granularity))
-        x1 = max(0, int(round(self.mario.rect.y / granularity)) - min(left_paddding, padding))
-        x2 = max(0, int(round(self.mario.rect.y / granularity)) + (2 * padding - min(left_paddding, padding)))
-        x3 = int(round(self.mario.rect.x / granularity)) - min(upper_padding, padding)
-        x4 = int(round(self.mario.rect.x / granularity)) + (2 * padding - min(upper_padding, padding))
-
-        numpy_frame = array[x1: x2, x3: x4]
+            numpy_frame = array[x1: x2, x3: x4]
+        else:
+            numpy_frame = array[0:MAP_HEIGHT, 0:MAP_WIDTH]
 
         return numpy_frame
 
