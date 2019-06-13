@@ -380,7 +380,7 @@ def deep_q_learning(sess,
 
     total_state = np.stack([state], axis=2)
 
-    if not env.headless:
+    if env.headless:
 
         for i in range(replay_memory_init_size):
             action_probs = policy(sess, state, epsilons[min(total_t, epsilon_decay_steps-1)])
