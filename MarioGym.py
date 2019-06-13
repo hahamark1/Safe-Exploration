@@ -1,8 +1,5 @@
 import pygame
-import random
-import pickle
 import numpy as np
-import time
 from classes.Level import Level
 from classes.LevelHeadless import LevelHeadless
 from entities.Mario import Mario
@@ -16,7 +13,6 @@ from classes.Menu import Menu
 import gym
 from gym import spaces
 import matplotlib.pyplot as plt
-from gym.utils import seeding
 
 EPISODE_LENGTH = 1500
 

@@ -28,9 +28,8 @@ CONV_2 = 8
 CONV_3 = 16
 MAX_PIXEL = 255.0
 # MAP_MULTIPLIER = 30.9
-# EXPERIMENT_NAME = 'safe_exploration_5.2'
-# EXPERIMENT_NAME = 'safe_exploration_5.5'
-EXPERIMENT_NAME = 'safe_exploration_5.4'
+
+EXPERIMENT_NAME = 'safe_exploration_5.5'
 HEADLESS = True
 # LEVEL_NAME = 'Level-basic-one-hole.json'
 LEVEL_NAME = 'Level-basic-one-hole-three-coins.json'
@@ -335,7 +334,8 @@ def deep_q_learning(sess,
         episode_coins=np.zeros(num_episodes),
         episode_levels=np.zeros(num_episodes),
         episode_total_death=np.zeros(num_episodes),
-        episode_distance=np.zeros(num_episodes))
+        episode_distance=np.zeros(num_episodes),
+        episode_death=np.zeros(num_episodes))
 
     # Create directories for checkpoints and summaries
     checkpoint_dir = os.path.join(experiment_dir, "checkpoints")
@@ -476,9 +476,12 @@ def deep_q_learning(sess,
             stats.episode_kills[i_episode] += info['num_killed']
             stats.episode_coins[i_episode] += info['coins_taken']
             stats.episode_levels[i_episode] += level_up
+            stats.episode_death[i_episode] += info['death']
 
             if info['death']:
                 total_deaths += 1
+            if env.mario.rect.x > dist:
+                dist = env.mario.rect.x
             stats.episode_total_death[i_episode] = total_deaths
 
             # Sample a minibatch from the replay memory
@@ -525,6 +528,8 @@ def deep_q_learning(sess,
                                   tag="episode_total_death")
         episode_summary.value.add(simple_value=stats.episode_distance[i_episode], node_name="episode_distance",
                                   tag="episode_distance")
+        episode_summary.value.add(simple_value=stats.episode_death[i_episode], node_name="episode_death",
+                                  tag="episode_death")
         q_estimator.summary_writer.add_summary(episode_summary, total_t)
         q_estimator.summary_writer.flush()
 
@@ -535,7 +540,8 @@ def deep_q_learning(sess,
             episode_coins=stats.episode_coins[:i_episode+1],
             episode_levels=stats.episode_levels[:i_episode+1],
             episode_distance=stats.episode_distance[:i_episode+1],
-            episode_total_death=stats.episode_total_death[:i_episode+1]
+            episode_total_death=stats.episode_total_death[:i_episode+1],
+            episode_death=stats.episode_death[:i_episode + 1]
         )
     env.monitor.close()
     return stats
@@ -571,7 +577,7 @@ if __name__ == "__main__":
                                         update_target_estimator_every=1000,
                                         epsilon_start=1.0,
                                         epsilon_end=0.1,
-                                        epsilon_decay_steps=10000,
+                                        epsilon_decay_steps=200000,
                                         discount_factor=0.99,
                                         batch_size=32,
                                         selfishness=1.0):
