@@ -22,22 +22,25 @@ import numpy as np
 # Atari Actions: 0 (noop), 1 (fire), 2 (left) and 3 (rig)
 VALID_ACTIONS = [0, 1, 2, 3,4 ,5 ]
 WINDOW_LENGTH = 4
-IMAGE_SIZE = 128
-CONV_1 = 8
-CONV_2 = 16
+IMAGE_SIZE = 32
+CONV_1 = 4
+CONV_2 = 8
 CONV_3 = 16
 MAX_PIXEL = 255.0
 # MAP_MULTIPLIER = 30.9
 # EXPERIMENT_NAME = 'safe_exploration_5.2'
-EXPERIMENT_NAME = 'safe_exploration_5.3'
-# EXPERIMENT_NAME = 'safe_exploration_5.4'
-HEADLESS = True
+# EXPERIMENT_NAME = 'safe_exploration_5.5'
+EXPERIMENT_NAME = 'safe_exploration_5.4'
+HEADLESS = False
 # LEVEL_NAME = 'Level-basic-one-hole.json'
 LEVEL_NAME = 'Level-basic-one-hole-three-coins.json'
 ER_SIZE = 100000000
 PARTIAL_OBSERVATION = False
+DISTANCE_REWARD = True
 
-env = MarioGym(headless=HEADLESS, level_name=LEVEL_NAME, partial_observation=PARTIAL_OBSERVATION)
+POLICY = 'GREEDY'
+
+env = MarioGym(HEADLESS, step_size=30, level_name=LEVEL_NAME, partial_observation=PARTIAL_OBSERVATION, distance_reward=DISTANCE_REWARD)
 
 
 class StateProcessor():
@@ -359,9 +362,12 @@ def deep_q_learning(sess,
     epsilons = np.linspace(epsilon_start, epsilon_end, epsilon_decay_steps)
 
     # The policy we're following
-    policy = make_epsilon_greedy_policy(
-        q_estimator,
-        len(VALID_ACTIONS))
+    if POLICY == 'BOLTZMAN':
+        policy = make_boltzmann_policy(
+            q_estimator,
+            len(VALID_ACTIONS))
+    else:
+        policy = make_epsilon_greedy_policy(q_estimator, len(VALID_ACTIONS))
 
     # Populate the replay memory with initial experience
     print("Populating replay memory...")
@@ -374,28 +380,33 @@ def deep_q_learning(sess,
 
     total_state = np.stack([state], axis=2)
 
-    for i in range(replay_memory_init_size):
-        action_probs = policy(sess, state, epsilons[min(total_t, epsilon_decay_steps-1)])
-        action = np.random.choice(np.arange(len(action_probs)), p=action_probs)
+    if not env.headless:
+
+        for i in range(replay_memory_init_size):
+            action_probs = policy(sess, state, epsilons[min(total_t, epsilon_decay_steps-1)])
+
+            action_probs = action_probs + [0,1,0,0,1,0]
+            action_probs = softmax(action_probs)
+            action = np.random.choice(np.arange(len(action_probs)), p=action_probs)
 
 
-        next_total_state, reward, done, info = env.step(VALID_ACTIONS[action])
-        next_state = state_processor.process(sess, next_total_state, 1)
-        next_state = np.append(state[:,:,1:], np.expand_dims(next_state, 2), axis=2)
+            next_total_state, reward, done, info = env.step(VALID_ACTIONS[action])
+            next_state = state_processor.process(sess, next_total_state, 1)
+            next_state = np.append(state[:,:,1:], np.expand_dims(next_state, 2), axis=2)
 
-        next_total_state = np.stack([next_state], axis=2)
+            next_total_state = np.stack([next_state], axis=2)
 
 
-        replay_memory.append(Transition(total_state, action, reward, next_total_state, done))
-        if done:
-            total_state = env.reset(levelname=LEVEL_NAME)
-            state = state_processor.process(sess, total_state, 1)
+            replay_memory.append(Transition(total_state, action, reward, next_total_state, done))
+            if done:
+                total_state = env.reset(levelname=LEVEL_NAME)
+                state = state_processor.process(sess, total_state, 1)
 
-            state = np.stack([state] * WINDOW_LENGTH, axis=2)
-            total_state = np.stack([state], axis=2)
-        else:
-            state = next_state
-            total_state = next_total_state
+                state = np.stack([state] * WINDOW_LENGTH, axis=2)
+                total_state = np.stack([state], axis=2)
+            else:
+                state = next_state
+                total_state = next_total_state
 
     # Record videos
     # Use the gym env Monitor wrapper
@@ -423,10 +434,6 @@ def deep_q_learning(sess,
 
         # One step in the environment
         for t in itertools.count():
-
-            if env.env.mario.rect.left > dist:
-                dist = env.env.mario.rect.left
-                # print('A new distance was foudn to be: {}\n'.format(dist))
 
             # Epsilon for this time step
             epsilon = epsilons[min(total_t, epsilon_decay_steps-1)]
@@ -560,11 +567,11 @@ if __name__ == "__main__":
                                         experiment_dir=experiment_dir,
                                         num_episodes=100000,
                                         replay_memory_size=ER_SIZE,
-                                        replay_memory_init_size=10000,
-                                        update_target_estimator_every=10000,
+                                        replay_memory_init_size=5000,
+                                        update_target_estimator_every=1000,
                                         epsilon_start=1.0,
                                         epsilon_end=0.1,
-                                        epsilon_decay_steps=500000,
+                                        epsilon_decay_steps=10000,
                                         discount_factor=0.99,
                                         batch_size=32,
                                         selfishness=1.0):
