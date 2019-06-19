@@ -56,7 +56,7 @@ class LevelHeadless():
                 elif(obj['name'] == "coin"):
                     self.addCoin(position[0], position[1])
                 elif(obj['name'] == "ground"):
-                    self.groundList.append([position[0], position[1]])
+                    self.groundList.append([position[0], position[1]], )
 
 
     def loadLayers(self, data):

@@ -5,6 +5,7 @@ import numpy as np
 import os
 import random
 import sys
+import pickle
 
 from MarioGym import MarioGym, MAP_MULTIPLIER, MAP_WIDTH, MAP_HEIGHT
 import tensorflow as tf
@@ -16,30 +17,9 @@ from lib import plotting
 from collections import deque, namedtuple
 import matplotlib.pyplot as plt
 import numpy as np
+from constants import *
 
-
-
-# Atari Actions: 0 (noop), 1 (fire), 2 (left) and 3 (rig)
-VALID_ACTIONS = [0, 1, 2, 3,4 ,5 ]
-WINDOW_LENGTH = 4
-IMAGE_SIZE = 32
-CONV_1 = 4
-CONV_2 = 8
-CONV_3 = 16
-MAX_PIXEL = 255.0
-# MAP_MULTIPLIER = 30.9
-
-EXPERIMENT_NAME = 'safe_exploration_5.5'
-HEADLESS = True
-# LEVEL_NAME = 'Level-basic-one-hole.json'
-LEVEL_NAME = 'Level-basic-one-hole-three-coins.json'
-ER_SIZE = 100000000
-PARTIAL_OBSERVATION = False
-DISTANCE_REWARD = True
-
-POLICY = 'GREEDY'
-
-env = MarioGym(HEADLESS, step_size=30, level_name=LEVEL_NAME, partial_observation=PARTIAL_OBSERVATION, distance_reward=DISTANCE_REWARD)
+env = MarioGym(HEADLESS, step_size=STEP_SIZE, level_name=LEVEL_NAME, partial_observation=PARTIAL_OBSERVATION, distance_reward=DISTANCE_REWARD)
 
 
 class StateProcessor():
@@ -54,7 +34,7 @@ class StateProcessor():
             self.output1 = tf.expand_dims(self.input_state[:,:], 2)
 
             self.output1 = tf.image.resize_images(
-                self.output1, [IMAGE_SIZE, IMAGE_SIZE], method=tf.image.ResizeMethod.NEAREST_NEIGHBOR)
+                self.output1, [IMAGE_SIZE, IMAGE_SIZE], method=tf.image.ResizeMethod.BILINEAR)
             self.output1 = tf.squeeze(self.output1)
 
             # self.output2 = tf.expand_dims(self.input_state[:,:,1], 2)
@@ -275,6 +255,23 @@ def plot_layers(image):
         plt.imshow(image)
         plt.show()
 
+# def load_memory(fn):
+#     Transition = namedtuple("Transition", ["state", "action", "reward", "next_state", "done"])
+#
+#     with open('{}.pt'.format(fn), 'rb') as pf:
+#         replay_memory = pickle.load(pf)
+#
+#     rm = []
+#     for exp in replay_memory:
+#         rm.append(Transition(exp[0], exp[1], exp[2], exp[3], exp[4]))
+#     return rm
+#
+#
+# def prioritzie_replay(replay_memory):
+#     memory = Memory(memory_size)
+#     for exp in replay_memory:
+#         memory.store(exp)
+
 def deep_q_learning(sess,
                     env,
                     q_estimator,
@@ -380,33 +377,43 @@ def deep_q_learning(sess,
 
     total_state = np.stack([state], axis=2)
 
-    if env.headless:
 
-        for i in range(replay_memory_init_size):
-            action_probs = policy(sess, state, epsilons[min(total_t, epsilon_decay_steps-1)])
+    if USE_MEMORY:
+        fn = '{}_{}'.format(LEVEL_NAME, REPLAY_MEMORY_SIZE)
+        replay_memory = load_memory(fn)
 
-            action_probs = action_probs + [0,1,0,0,1,0]
-            action_probs = softmax(action_probs)
-            action = np.random.choice(np.arange(len(action_probs)), p=action_probs)
+        if PRIORITIZE_MEMORY:
+
+            replay_memory = prioritzie_replay(replay_memory)
+
+    else:
+        if env.headless:
+
+            for i in range(replay_memory_init_size):
+                action_probs = policy(sess, state, epsilons[min(total_t, epsilon_decay_steps-1)])
+
+                action_probs = action_probs + [0,1,0,0,1,0]
+                action_probs = softmax(action_probs)
+                action = np.random.choice(np.arange(len(action_probs)), p=action_probs)
 
 
-            next_total_state, reward, done, info = env.step(VALID_ACTIONS[action])
-            next_state = state_processor.process(sess, next_total_state, 1)
-            next_state = np.append(state[:,:,1:], np.expand_dims(next_state, 2), axis=2)
+                next_total_state, reward, done, info = env.step(VALID_ACTIONS[action])
+                next_state = state_processor.process(sess, next_total_state, 1)
+                next_state = np.append(state[:,:,1:], np.expand_dims(next_state, 2), axis=2)
 
-            next_total_state = np.stack([next_state], axis=2)
+                next_total_state = np.stack([next_state], axis=2)
 
 
-            replay_memory.append(Transition(total_state, action, reward, next_total_state, done))
-            if done:
-                total_state = env.reset(levelname=LEVEL_NAME)
-                state = state_processor.process(sess, total_state, 1)
+                replay_memory.append(Transition(total_state, action, reward, next_total_state, done))
+                if done:
+                    total_state = env.reset(levelname=LEVEL_NAME)
+                    state = state_processor.process(sess, total_state, 1)
 
-                state = np.stack([state] * WINDOW_LENGTH, axis=2)
-                total_state = np.stack([state], axis=2)
-            else:
-                state = next_state
-                total_state = next_total_state
+                    state = np.stack([state] * WINDOW_LENGTH, axis=2)
+                    total_state = np.stack([state], axis=2)
+                else:
+                    state = next_state
+                    total_state = next_total_state
 
     # Record videos
     # Use the gym env Monitor wrapper

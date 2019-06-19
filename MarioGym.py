@@ -13,16 +13,9 @@ from classes.Menu import Menu
 import gym
 from gym import spaces
 import matplotlib.pyplot as plt
+from constants import *
 
-EPISODE_LENGTH = 1500
 
-HOLE_REWARD = 1
-
-COIN_REWARD = 1
-MOVES = ['moveLeft', 'moveRight', 'jump', 'jumpLeft', 'jumpRight', 'doNothing']
-MAP_MULTIPLIER = 30.9
-MAP_HEIGHT = 72
-MAP_WIDTH=80
 
 class MarioGym(gym.Env):
 
@@ -188,50 +181,49 @@ class MarioGym(gym.Env):
         padding = int(256/granularity)
         level_size = self.level.levelLength*padding
         array = np.zeros((level_size, level_size))
+        granx = int(level_size / MAP_HEIGHT)
+        grany = int(level_size / MAP_WIDTH)
 
-        y_axis = int(round(self.mario.rect.y/granularity))
-        x_axis = int(round(self.mario.rect.x/granularity))
-        array[y_axis: y_axis + granularity, x_axis: x_axis + granularity] = -1
+        y_axis_1 = int(round(self.mario.rect.top/granularity))
+        y_axis_2 = int(round(self.mario.rect.bottom / granularity))
+        x_axis_1 = int(round(self.mario.rect.left/granularity))
+        x_axis_2 = int(round(self.mario.rect.right / granularity))
+        array[y_axis_1: y_axis_2, x_axis_1: x_axis_2] = -1
         for entity in self.level.entityList:
-            y_axis = int(round(entity.rect.y / granularity))
-            x_axis = int(round(entity.rect.x / granularity))
+            y_axis_1 = int(round(entity.rect.top / granularity))
+            y_axis_2 = int(round(entity.rect.bottom / granularity))
+            x_axis_1 = int(round(entity.rect.left / granularity))
+            x_axis_2 = int(round(entity.rect.right / granularity))
             if entity.__class__.__name__ == 'Koopa' or entity.__class__.__name__ == 'Goomba' or entity.__class__.__name__ == 'GoombaHeadless':
-                array[y_axis: y_axis + granularity, x_axis: x_axis + granularity] = 1
+                array[y_axis_1: y_axis_2, x_axis_1: x_axis_2] = 1
             elif entity.__class__.__name__ == 'Coin' or entity.__class__.__name__ == 'CoinHeadless':
-                array[y_axis: y_axis + granularity, x_axis: x_axis + granularity] = 2
+                array[y_axis_1: y_axis_2, x_axis_1: x_axis_2] = 2
             elif entity.__class__.__name__ == 'RandomBox':
                 if not entity.triggered:
-                    array[y_axis: y_axis + granularity, x_axis: x_axis + granularity] = 3
+                    array[y_axis_1: y_axis_2, x_axis_1: x_axis_2] = 3
                 else:
-                    array[y_axis: y_axis + granularity, x_axis: x_axis + granularity] = 4
-        ground_tiles = set()
-        ground_start = 1000
-        ground_end = 0
-        for ground in self.level.groundList:
-            y_axis = int(round(32*ground[1] / granularity))
-            x_axis = int(round(32*ground[0] / granularity))
-            array[y_axis: y_axis + granularity, x_axis: x_axis + granularity] = 5
+                    array[y_axis_1: y_axis_2, x_axis_1: x_axis_2] = 4
 
-            ground_tiles.add(ground[0])
-            if ground[0] == 30:
-                if ground[1] > ground_end:
-                    ground_end = ground[1]
-                if ground[1] < ground_start:
-                    ground_start = ground[1]
+        for layer in self.level.level:
+            for ground in layer:
+                if ground.rect:
+                    y_axis_1 = int(round(ground.rect.top / granularity))
+                    y_axis_2 = int(round(ground.rect.bottom / granularity))
+                    x_axis_1 = int(round(ground.rect.left / granularity))
+                    x_axis_2 = int(round(ground.rect.right / granularity))
 
-        hole_values = missing_elements(list(ground_tiles))
-        ground_size = ground_end - ground_start
+                    array[y_axis_1: y_axis_2, x_axis_1: x_axis_2] = 5
+        for layer in self.level.level[13:17]:
+            for index in range(len(layer)):
+                if not layer[index].rect and layer[index-1].rect:
+                    y_axis_1 = int(round(layer[0].rect.top / granularity))
+                    y_axis_2 = int(round(layer[0].rect.bottom / granularity))
+                    x_axis_1 = int(round(layer[index-1].rect.right / granularity))
+                    width = layer[index-1].rect.right - layer[index-1].rect.left
+                    x_axis_2 = int(round((layer[index-1].rect.right + 2 * width) / granularity))
 
-        for hole_x in hole_values:
-            x_axis = int(round(32 * hole_x / granularity))
-            y_axis = int(round(32 * ground_start / granularity))
-            array[y_axis: y_axis +  ground_size * granularity, x_axis: x_axis +  granularity] = -5
+                    array[y_axis_1: y_axis_2, x_axis_1: x_axis_2] = -5
 
-
-
-        # array_v2 = np.hstack((np.zeros((level_size, paddin<g)), array))
-        # array_v2 = np.vstack((np.zeros((padding, level_size+padding)), array))
-        #
         if self.partial_observation:
             left_paddding = int(round(self.mario.rect.y / granularity))
             upper_padding  = int(round(self.mario.rect.x / granularity))

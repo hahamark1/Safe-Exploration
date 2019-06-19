@@ -1,0 +1,36 @@
+VALID_ACTIONS = [0, 1, 2, 3,4 ,5 ]
+WINDOW_LENGTH = 4
+IMAGE_SIZE = 32
+CONV_1 = 4
+CONV_2 = 8
+CONV_3 = 16
+MAX_PIXEL = 255.0
+
+EXPERIMENT_NAME = 'safe_exploration_6.0'
+HEADLESS = True
+# LEVEL_NAME = 'Level-basic-one-hole.json'
+LEVEL_NAME = 'Level-basic-one-hole-three-coins.json'
+ER_SIZE = 100000000
+PARTIAL_OBSERVATION = False
+DISTANCE_REWARD = True
+POLICY = 'GREEDY'
+
+EPISODE_LENGTH = 500
+STEP_SIZE = 20
+STEP_SIZE_VIDEO = 1
+
+HOLE_REWARD = 1
+COIN_REWARD = 1
+BLOCK_SIZE = 29.8
+
+MOVES = ['moveLeft', 'moveRight', 'jump', 'jumpLeft', 'jumpRight', 'doNothing']
+MAP_MULTIPLIER = 30.9
+MAP_HEIGHT = 64
+MAP_WIDTH = 76
+
+REPLAY_MEMORY_SIZE = 100000
+USE_MEMORY = False
+PRIORITIZE_MEMORY = False
+
+epsilon = 0
+SALIENCY = True
