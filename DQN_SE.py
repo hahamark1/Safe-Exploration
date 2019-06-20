@@ -83,7 +83,7 @@ class Estimator():
 
         # Placeholders for our input
         # Our input are WINDOW_LENGTH RGB frames of shape 160, 160 each
-        self.X_pl = tf.placeholder(shape=[None, IMAGE_SIZE, IMAGE_SIZE, WINDOW_LENGTH], dtype=tf.uint8, name="X")
+        self.X_pl = tf.placeholder(shape=[None, WINDOW_LENGTH, IMAGE_SIZE, IMAGE_SIZE], dtype=tf.uint8, name="X")
         # The TD target val84,  84ue
         self.y_pl = tf.placeholder(shape=[None], dtype=tf.float32, name="y")
         # Integer id of which action was selected
@@ -399,7 +399,7 @@ def deep_q_learning(sess,
 
                 next_total_state, reward, done, info = env.step(VALID_ACTIONS[action])
                 next_state = state_processor.process(sess, next_total_state, 1)
-                next_state = np.append(state[:,:,1:], np.expand_dims(next_state, 2), axis=2)
+                next_state = np.append(state[1:,:,:], np.expand_dims(next_state, 0), axis=0)
 
                 next_total_state = np.stack([next_state], axis=0)
 
@@ -466,7 +466,7 @@ def deep_q_learning(sess,
             next_total_state, reward, done, info = env.step(VALID_ACTIONS[action])
             level_up = 0
             next_state = state_processor.process(sess, next_total_state, 1)
-            next_state = np.append(state[:, :, 1:], np.expand_dims(next_state, 2), axis=2)
+            next_state = np.append(state[1:,:,:], np.expand_dims(next_state, 0), axis=0)
 
             next_total_state = np.stack([next_state], axis=0)
 
@@ -494,21 +494,22 @@ def deep_q_learning(sess,
             # Sample a minibatch from the replay memory
             samples = random.sample(replay_memory, batch_size)
             states_batch, action_batch, reward_batch, next_states_batch, done_batch = map(np.array, zip(*samples))
-            # Calculate q values and targets (Double DQN)coins_left
-            q_values_next = q_estimator.predict(sess, next_states_batch[:,:,:,0,:])
+            next_states_batch = np.squeeze(next_states_batch)
+            # Calculate q values and targets (Double DQN)
+            q_values_next = q_estimator.predict(sess, next_states_batch)
 
             q_values_next_total = q_values_next
 
             best_actions = np.argmax(q_values_next_total, axis=1)
-            q_values_next_target = target_estimator.predict(sess, next_states_batch[:,:,:,0,:])
+            q_values_next_target = target_estimator.predict(sess, next_states_batch)
 
             targets_batch = reward_batch + np.invert(done_batch).astype(np.float32) * \
                             (discount_factor * q_values_next_target[np.arange(batch_size), best_actions])
 
             # Perform gradient descent update
-            states_batch = np.array(states_batch)
+            states_batch = np.squeeze(states_batch)
 
-            loss1 = q_estimator.update(sess, states_batch[:,:,:,0,:], action_batch, targets_batch)
+            loss1 = q_estimator.update(sess, states_batch, action_batch, targets_batch)
 
             loss = loss1
 
@@ -517,7 +518,8 @@ def deep_q_learning(sess,
 
             state = next_state
             total_state = next_total_state
-            total_t += 1
+
+        total_t += 1
 
         stats.episode_distance[i_episode] = dist
         stats.episode_levels[i_episode] += 1
