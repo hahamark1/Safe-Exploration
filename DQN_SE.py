@@ -255,22 +255,26 @@ def plot_layers(image):
         plt.imshow(image)
         plt.show()
 
-# def load_memory(fn):
-#     Transition = namedtuple("Transition", ["state", "action", "reward", "next_state", "done"])
-#
-#     with open('{}.pt'.format(fn), 'rb') as pf:
-#         replay_memory = pickle.load(pf)
-#
-#     rm = []
-#     for exp in replay_memory:
-#         rm.append(Transition(exp[0], exp[1], exp[2], exp[3], exp[4]))
-#     return rm
-#
-#
-# def prioritzie_replay(replay_memory):
-#     memory = Memory(memory_size)
-#     for exp in replay_memory:
-#         memory.store(exp)
+def load_memory(fn, mem_size, expected_size):
+    Transition = namedtuple("Transition", ["state", "action", "reward", "next_state", "done"])
+
+    with open('{}.pt'.format(fn), 'rb') as pf:
+        replay_memory = pickle.load(pf)
+
+    rm = []
+    for exp in replay_memory:
+        rm.append(Transition(exp[0], exp[1], exp[2], exp[3], exp[4]))
+
+    factor = int(expected_size / mem_size)
+    rm = factor * rm
+    return rm
+
+
+def prioritzie_replay(replay_memory):
+    memory = Memory(ER_SIZE)
+    for exp in replay_memory:
+        memory.store(exp)
+    return memory
 
 def deep_q_learning(sess,
                     env,
@@ -379,8 +383,9 @@ def deep_q_learning(sess,
 
 
     if USE_MEMORY:
-        fn = '{}_{}'.format(LEVEL_NAME, REPLAY_MEMORY_SIZE)
-        replay_memory = load_memory(fn)
+        fn = '{}_{}'.format(LEVEL_NAME, 100)
+        replay_memory = load_memory(fn, 100, REPLAY_MEMORY_SIZE)
+
 
         if PRIORITIZE_MEMORY:
 
