@@ -370,12 +370,12 @@ def deep_q_learning(sess,
     print("Populating replay memory...")
     total_state = env.reset(levelname=LEVEL_NAME)
     state = state_processor.process(sess, total_state, 1)
-    state = np.stack([state] * WINDOW_LENGTH, axis=2)
+    state = np.stack([state] * WINDOW_LENGTH, axis=0)
 
     # state = np.stack([state] * WINDOW_LENGTH, axis=2)
     total_death = 0
 
-    total_state = np.stack([state], axis=2)
+    total_state = np.stack([state], axis=0)
 
 
     if USE_MEMORY:
@@ -401,7 +401,7 @@ def deep_q_learning(sess,
                 next_state = state_processor.process(sess, next_total_state, 1)
                 next_state = np.append(state[:,:,1:], np.expand_dims(next_state, 2), axis=2)
 
-                next_total_state = np.stack([next_state], axis=2)
+                next_total_state = np.stack([next_state], axis=0)
 
 
                 replay_memory.append(Transition(total_state, action, reward, next_total_state, done))
@@ -409,8 +409,8 @@ def deep_q_learning(sess,
                     total_state = env.reset(levelname=LEVEL_NAME)
                     state = state_processor.process(sess, total_state, 1)
 
-                    state = np.stack([state] * WINDOW_LENGTH, axis=2)
-                    total_state = np.stack([state], axis=2)
+                    state = np.stack([state] * WINDOW_LENGTH, axis=0)
+                    total_state = np.stack([state], axis=0)
                 else:
                     state = next_state
                     total_state = next_total_state
@@ -433,8 +433,8 @@ def deep_q_learning(sess,
         # Reset the environment
         total_state = env.reset(levelname=LEVEL_NAME)
         state = state_processor.process(sess, total_state, 1)
-        state = np.stack([state] * WINDOW_LENGTH, axis=2)
-        total_state = np.stack([state], axis=2)
+        state = np.stack([state] * WINDOW_LENGTH, axis=0)
+        total_state = np.stack([state], axis=0)
 
         loss = None
         dist = 0
@@ -468,7 +468,7 @@ def deep_q_learning(sess,
             next_state = state_processor.process(sess, next_total_state, 1)
             next_state = np.append(state[:, :, 1:], np.expand_dims(next_state, 2), axis=2)
 
-            next_total_state = np.stack([next_state], axis=2)
+            next_total_state = np.stack([next_state], axis=0)
 
             # If our replay memory is full, pop the first element
             if len(replay_memory) == replay_memory_size:
@@ -583,7 +583,7 @@ if __name__ == "__main__":
                                         replay_memory_init_size=5000,
                                         update_target_estimator_every=1000,
                                         epsilon_start=1.0,
-                                        epsilon_end=0.1,
+                                        epsilon_end=MIN_EPSILON,
                                         epsilon_decay_steps=200000,
                                         discount_factor=0.99,
                                         batch_size=32,

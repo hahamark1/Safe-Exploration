@@ -6,7 +6,7 @@ CONV_2 = 8
 CONV_3 = 16
 MAX_PIXEL = 255.0
 
-EXPERIMENT_NAME = 'safe_exploration_6.0'
+EXPERIMENT_NAME = 'safe_exploration_6.1'
 HEADLESS = True
 # LEVEL_NAME = 'Level-basic-one-hole.json'
 LEVEL_NAME = 'Level-basic-one-hole-three-coins.json'
@@ -16,7 +16,7 @@ DISTANCE_REWARD = True
 POLICY = 'GREEDY'
 
 EPISODE_LENGTH = 500
-STEP_SIZE = 20
+STEP_SIZE = 2
 STEP_SIZE_VIDEO = 1
 
 HOLE_REWARD = 1
@@ -34,3 +34,4 @@ PRIORITIZE_MEMORY = False
 
 epsilon = 0
 SALIENCY = True
+MIN_EPSILON = 0.01
