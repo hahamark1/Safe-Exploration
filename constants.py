@@ -6,7 +6,7 @@ CONV_2 = 8
 CONV_3 = 16
 MAX_PIXEL = 255.0
 
-EXPERIMENT_NAME = 'safe_exploration_6.1'
+EXPERIMENT_NAME = 'safe_exploration_6.2'
 HEADLESS = True
 # LEVEL_NAME = 'Level-basic-one-hole.json'
 LEVEL_NAME = 'Level-basic-one-hole-three-coins.json'
