@@ -518,8 +518,7 @@ def deep_q_learning(sess,
 
             state = next_state
             total_state = next_total_state
-
-        total_t += 1
+            total_t += 1
 
         stats.episode_distance[i_episode] = dist
         stats.episode_levels[i_episode] += 1
