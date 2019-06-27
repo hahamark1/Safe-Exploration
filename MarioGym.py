@@ -14,12 +14,13 @@ import gym
 from gym import spaces
 import matplotlib.pyplot as plt
 from constants import *
+import random
 
 
 
 class MarioGym(gym.Env):
 
-    def __init__(self, headless=True, level_name='Level-basic-one-goomba.json', no_coins=5, step_size=5, partial_observation=False, distance_reward=False):
+    def __init__(self, headless=True, level_name='Level-basic-one-goomba.json', no_coins=5, step_size=5, partial_observation=False, distance_reward=False, experiment='SE'):
         self.action_space = spaces.Discrete(6)
         self.observation_space = spaces.Box(low=-10000000, high=100000000, dtype=np.float, shape=(40, 80, 4))
 
@@ -30,8 +31,10 @@ class MarioGym(gym.Env):
         self.max_frame_rate = 60
         self.steps = 0
         self.observation = None
+        self.experiment = experiment
         self.level = None
         self.mario = None
+        self.mario2 = None
         self.screen = None
         self.dashboard = None
         self.sound = None
@@ -74,6 +77,7 @@ class MarioGym(gym.Env):
     def step(self, action_num):
         self.steps += 1
         action = MOVES[action_num]
+        # action = 'doNothing'
         num_goombas= len([x for x in self.level.entityList
                           if ((x.__class__.__name__ == 'Goomba'
                               or x.__class__.__name__ == 'GoombaHeadless')
@@ -132,6 +136,8 @@ class MarioGym(gym.Env):
             self.menu.update()
 
             self.mario = Mario(0, y_position/32, self.level, self.screen, self.dashboard, self.sound)
+            if self.experiment == 'FD':
+                self.mario2 = Mario(0, 2, self.level, self.screen, self.dashboard, self.sound)
             self.clock = pygame.time.Clock()
 
             self.menu.dashboard.state = "play"
@@ -141,6 +147,8 @@ class MarioGym(gym.Env):
             pygame.display.update()
         else:
             self.level = LevelHeadless(self.levelname)
+            if self.experiment == 'FD':
+                self.mario2 = MarioHeadless(0, 2, self.level)
             self.mario = MarioHeadless(0, 0, self.level)
             self.clock = clock
 
@@ -157,10 +165,16 @@ class MarioGym(gym.Env):
             coins = self.return_coins()
             self.do_move(move)
 
+            if self.experiment == 'FD':
+                random_move = random.choice(MOVES)
+                self.do_random_move(self.mario2, random_move)
+
             if not self.headless:
                 pygame.display.set_caption("{:.2f} FPS".format(self.clock.get_fps()))
                 self.level.drawLevel(self.mario.camera)
                 self.mario.update()
+                if self.experiment == 'FD':
+                    self.mario2.update()
                 self.clock.tick(self.max_frame_rate)
                 self.dashboard.update()
                 pygame.display.update()
@@ -168,6 +182,8 @@ class MarioGym(gym.Env):
             else:
                 self.level.updateEntities()
                 self.mario.update()
+                if self.experiment == 'FD':
+                    self.mario2.update()
                 self.clock += (1.0 / 60.0)
                 self.score = self.level.points
 
@@ -340,6 +356,23 @@ class MarioGym(gym.Env):
             self.mario.traits['jumpTrait'].start()
         elif move == 'doNothing':
             self.mario.traits['goTrait'].direction = 0
+
+    def do_random_move(self, mario, move):
+        if move == 'moveLeft':
+            mario.traits['goTrait'].direction = -1
+        elif move == 'moveRight':
+            mario.traits['goTrait'].direction = 1
+        elif move == 'jump':
+            mario.traits['jumpTrait'].start()
+        elif move == 'jumpRight':
+            mario.traits['goTrait'].direction = 1
+            mario.traits['jumpTrait'].start()
+        elif move == 'jumpLeft':
+            mario.traits['goTrait'].direction = -1
+            mario.traits['jumpTrait'].start()
+        elif move == 'doNothing':
+            mario.traits['goTrait'].direction = 0
+
 
 def missing_elements(L):
     start, end = L[0], L[-1]

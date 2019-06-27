@@ -51,7 +51,7 @@ replay_memory = []
 # State processor
 state_processor = StateProcessor()
 
-replay_memory_size = 1000
+replay_memory_size = 100
 
 # Get the environment and extract the number of actions.
 env = MarioGym(HEADLESS, step_size=10, level_name=LEVEL_NAME, partial_observation=PARTIAL_OBSERVATION, distance_reward=DISTANCE_REWARD)
@@ -65,7 +65,8 @@ with tf.Session() as sess:
 
     total_state = env.reset(levelname=LEVEL_NAME)
     state = state_processor.process(sess, total_state, 1)
-    state = np.stack([state] * WINDOW_LENGTH, axis=2)
+    state = np.stack([state] * WINDOW_LENGTH, axis=0)
+    total_state = np.stack([state], axis=0)
 
     map_length = env.level.levelLength
 
@@ -77,6 +78,11 @@ with tf.Session() as sess:
 
         action = get_input()
         next_total_state, reward, done, info = env.step(action)
+
+        next_state = state_processor.process(sess, next_total_state, 1)
+        next_state = np.append(state[1:, :, :], np.expand_dims(next_state, 0), axis=0)
+
+        next_total_state = np.stack([next_state], axis=0)
 
         replay_memory.append([total_state, action, reward, next_total_state, done])
 

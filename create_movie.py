@@ -55,7 +55,7 @@ def make_saliency(action_probs, policy, sess, state, epsilon,env,image_counter, 
            mask = get_mask(center=[i, j], size=[IMAGE_SIZE, IMAGE_SIZE], r=r)
            state = state.astype(np.float32)
            state_mask = state
-           state_mask[:,:,0] += mask
+           state_mask[0,:,:] += mask
 
            action_probs_s = policy(sess, state_mask, epsilon)
            diff = action_probs - action_probs_s
@@ -77,7 +77,7 @@ def make_saliency(action_probs, policy, sess, state, epsilon,env,image_counter, 
 
 
 
-rootdir = '/home/hahamark/Desktop/safe_exploration_5.5'
+rootdir = '/home/hahamark/Documents/AI/thesis/moral-mario/experiments/safe_exploration_6.3/'
 
 
 def make_experiment_video(experiment_name, experiment_dir):
@@ -92,10 +92,9 @@ def make_experiment_video(experiment_name, experiment_dir):
     # experiment_dir = os.path.abspath("./experiments/{}".format(experiment_name))
     checkpoint_dir = os.path.join(experiment_dir, "checkpoints")
     checkpoint_path = os.path.join(checkpoint_dir, "model")
+
     video_path = os.path.join(experiment_dir, "video", experiment_name)
-    empty_folder(video_path)
     saliency_path = os.path.join(experiment_dir, "saliency", experiment_name)
-    empty_folder(saliency_path)
 
     if not os.path.exists(checkpoint_dir):
         os.makedirs(checkpoint_dir)
@@ -103,6 +102,9 @@ def make_experiment_video(experiment_name, experiment_dir):
         os.makedirs(video_path)
     if not os.path.exists(saliency_path):
         os.makedirs(saliency_path)
+
+    empty_folder(video_path)
+    empty_folder(saliency_path)
 
     saver = tf.train.Saver()
 
@@ -132,32 +134,36 @@ def make_experiment_video(experiment_name, experiment_dir):
         else:
             policy = make_epsilon_greedy_policy(q_estimator, len(VALID_ACTIONS))
 
+        # Reset the environment
         total_state = env.reset(levelname=LEVEL_NAME)
         state = state_processor.process(sess, total_state, 1)
-        state = np.stack([state] * WINDOW_LENGTH, axis=2)
-        total_state = np.stack([state], axis=2)
+        state = np.stack([state] * WINDOW_LENGTH, axis=0)
+        total_state = np.stack([state], axis=0)
 
         while not restart:
 
             # Perform the next action given the policy learnt
             action_probs = policy(sess, state, epsilon)
+
             action = np.random.choice(np.arange(len(action_probs)), p=action_probs)
 
             if SALIENCY:
                 # create screen with saliency
-                saliency = make_saliency(action_probs, policy, sess, state, epsilon, env, image_counter, video_path,
+                make_saliency(action_probs, policy, sess, state, epsilon, env, image_counter, video_path,
                                          saliency_path)
+                image_counter += 1
             else:
                 make_video(env.screen, image_counter, video_path)
+                image_counter += 1
 
             next_total_state, reward, restart, info = env.step(VALID_ACTIONS[action])
 
             next_state = state_processor.process(sess, next_total_state, 1)
-            next_state = np.append(state[:, :, 1:], np.expand_dims(next_state, 2), axis=2)
+            next_state = np.append(state[1:,:,:], np.expand_dims(next_state, 0), axis=0)
 
-            next_total_state = np.stack([next_state], axis=2)
+            next_total_state = np.stack([next_state], axis=0)
 
-            image_counter += 1
+
 
             state = next_state
             total_state = next_total_state

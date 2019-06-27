@@ -19,7 +19,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 from constants import *
 
-env = MarioGym(HEADLESS, step_size=STEP_SIZE, level_name=LEVEL_NAME, partial_observation=PARTIAL_OBSERVATION, distance_reward=DISTANCE_REWARD)
+env = MarioGym(HEADLESS, step_size=STEP_SIZE, level_name=LEVEL_NAME, partial_observation=PARTIAL_OBSERVATION, distance_reward=DISTANCE_REWARD, experiment=EXPERIMENT)
 
 
 class StateProcessor():
@@ -389,33 +389,33 @@ def deep_q_learning(sess,
             replay_memory = prioritzie_replay(replay_memory)
 
     else:
-        if env.headless:
+        # if env.headless:
 
-            for i in range(replay_memory_init_size):
-                action_probs = policy(sess, state, epsilons[min(total_t, epsilon_decay_steps-1)])
+        for i in range(replay_memory_init_size):
+            action_probs = policy(sess, state, epsilons[min(total_t, epsilon_decay_steps-1)])
 
-                action_probs = action_probs + [0,1,0,0,1,0]
-                action_probs = softmax(action_probs)
-                action = np.random.choice(np.arange(len(action_probs)), p=action_probs)
-
-
-                next_total_state, reward, done, info = env.step(VALID_ACTIONS[action])
-                next_state = state_processor.process(sess, next_total_state, 1)
-                next_state = np.append(state[1:,:,:], np.expand_dims(next_state, 0), axis=0)
-
-                next_total_state = np.stack([next_state], axis=0)
+            action_probs = action_probs + [0,1,0,0,1,0]
+            action_probs = softmax(action_probs)
+            action = np.random.choice(np.arange(len(action_probs)), p=action_probs)
 
 
-                replay_memory.append(Transition(total_state, action, reward, next_total_state, done))
-                if done:
-                    total_state = env.reset(levelname=LEVEL_NAME)
-                    state = state_processor.process(sess, total_state, 1)
+            next_total_state, reward, done, info = env.step(VALID_ACTIONS[action])
+            next_state = state_processor.process(sess, next_total_state, 1)
+            next_state = np.append(state[1:,:,:], np.expand_dims(next_state, 0), axis=0)
 
-                    state = np.stack([state] * WINDOW_LENGTH, axis=0)
-                    total_state = np.stack([state], axis=0)
-                else:
-                    state = next_state
-                    total_state = next_total_state
+            next_total_state = np.stack([next_state], axis=0)
+
+
+            replay_memory.append(Transition(total_state, action, reward, next_total_state, done))
+            if done:
+                total_state = env.reset(levelname=LEVEL_NAME)
+                state = state_processor.process(sess, total_state, 1)
+
+                state = np.stack([state] * WINDOW_LENGTH, axis=0)
+                total_state = np.stack([state], axis=0)
+            else:
+                state = next_state
+                total_state = next_total_state
 
     # Record videos
     # Use the gym env Monitor wrapper

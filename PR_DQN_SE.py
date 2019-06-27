@@ -6,6 +6,7 @@ import os
 import random
 import sys
 import pickle
+from PER import SumTree, Memory
 
 from MarioGym import MarioGym, MAP_MULTIPLIER, MAP_WIDTH, MAP_HEIGHT
 import tensorflow as tf
@@ -34,7 +35,7 @@ class StateProcessor():
             self.output1 = tf.expand_dims(self.input_state[:,:], 2)
 
             self.output1 = tf.image.resize_images(
-                self.output1, [IMAGE_SIZE, IMAGE_SIZE], method=tf.image.ResizeMethod.BILINEAR)
+                self.output1, [IMAGE_SIZE, IMAGE_SIZE], method=tf.image.ResizeMethod.NEAREST_NEIGHBOR)
             self.output1 = tf.squeeze(self.output1)
 
             # self.output2 = tf.expand_dims(self.input_state[:,:,1], 2)
@@ -89,6 +90,8 @@ class Estimator():
         # Integer id of which action was selected
         self.actions_pl = tf.placeholder(shape=[None], dtype=tf.int32, name="actions")
 
+        self.ISWeights_ = tf.placeholder(shape=[None, 1], dtype=tf.float32, name='IS_weights')
+
         X = self.normalize_pixels(self.X_pl)
         batch_size = tf.shape(self.X_pl)[0]
 
@@ -105,16 +108,23 @@ class Estimator():
         fc1 = tf.contrib.layers.fully_connected(flattened, 512)
         self.predictions = tf.contrib.layers.fully_connected(fc1, len(VALID_ACTIONS), activation_fn=None)
 
+        # Q is our predicted Q value.
+        # self.Q = tf.reduce_sum(tf.multiply(self.predictions, self.actions_pl), axis=1)
+
         # Get the predictions for the chosen actions only
         gather_indices = tf.range(batch_size) * tf.shape(self.predictions)[1] + self.actions_pl
         self.action_predictions = tf.gather(tf.reshape(self.predictions, [-1]), gather_indices)
 
+        # The loss is modified because of PER
+        self.absolute_errors = tf.abs(self.y_pl - self.action_predictions)  # for updating Sumtree
+
         # Calculate the loss
         self.losses = tf.squared_difference(self.y_pl, self.action_predictions)
-        self.loss = tf.reduce_mean(self.losses)
+        self.loss = tf.reduce_mean(self.ISWeights_ * self.losses)
+        # self.loss = tf.reduce_mean(self.losses)
 
         # Optimizer Parameters from original paper
-        self.optimizer = tf.train.RMSPropOptimizer(LR, WEIGHT_DECAY, MOMENTUM, Epsilon_network)
+        self.optimizer = tf.train.RMSPropOptimizer(0.025, 0.99, 0.0, 1e-6)
         self.train_op = self.optimizer.minimize(self.loss, global_step=tf.contrib.framework.get_global_step())
 
         # Summaries for Tensorboard
@@ -145,7 +155,7 @@ class Estimator():
         """
         return sess.run(self.predictions, { self.X_pl: s})
 
-    def update(self, sess, s, a, y):
+    def update(self, sess, s, a, y, is_weights):
         """
         Updates the estimator towards the given targets.
 
@@ -158,13 +168,13 @@ class Estimator():
         Returns:
           The calculated loss on the batch.
         """
-        feed_dict = { self.X_pl: s, self.y_pl: y, self.actions_pl: a}
-        summaries, global_step, _, loss = sess.run(
-            [self.summaries, tf.contrib.framework.get_global_step(), self.train_op, self.loss],
+        feed_dict = { self.X_pl: s, self.y_pl: y, self.actions_pl: a, self.ISWeights_: is_weights}
+        summaries, global_step, _, loss, abs_errors = sess.run(
+            [self.summaries, tf.contrib.framework.get_global_step(), self.train_op, self.loss, self.absolute_errors],
             feed_dict)
         if self.summary_writer:
             self.summary_writer.add_summary(summaries, global_step)
-        return loss
+        return loss, abs_errors
 
 def copy_model_parameters(sess, estimator1, estimator2):
     """
@@ -376,17 +386,19 @@ def deep_q_learning(sess,
     state = state_processor.process(sess, total_state, 1)
     state = np.stack([state] * WINDOW_LENGTH, axis=0)
 
+    # state = np.stack([state] * WINDOW_LENGTH, axis=2)
     total_death = 0
+
+    total_state = np.stack([state], axis=0)
 
 
     if USE_MEMORY:
         fn = '{}_{}'.format(LEVEL_NAME, 100)
         replay_memory = load_memory(fn, 100, REPLAY_MEMORY_SIZE)
-
-
+        print(len(replay_memory))
         if PRIORITIZE_MEMORY:
-
-            replay_memory = prioritzie_replay(replay_memory)
+            print('Creating priority memory')
+            memory = prioritzie_replay(replay_memory)
 
     else:
         if env.headless:
@@ -398,15 +410,13 @@ def deep_q_learning(sess,
                 action_probs = softmax(action_probs)
                 action = np.random.choice(np.arange(len(action_probs)), p=action_probs)
 
-
                 next_total_state, reward, done, info = env.step(VALID_ACTIONS[action])
                 next_state = state_processor.process(sess, next_total_state, 1)
                 next_state = np.append(state[1:,:,:], np.expand_dims(next_state, 0), axis=0)
-
                 next_total_state = np.stack([next_state], axis=0)
 
-
                 replay_memory.append(Transition(total_state, action, reward, next_total_state, done))
+
                 if done:
                     total_state = env.reset(levelname=LEVEL_NAME)
                     state = state_processor.process(sess, total_state, 1)
@@ -416,6 +426,15 @@ def deep_q_learning(sess,
                 else:
                     state = next_state
                     total_state = next_total_state
+
+        print('Memory is filled')
+
+        if PRIORITIZE_MEMORY:
+            memory = Memory(ER_SIZE)
+            for exp in replay_memory:
+                memory.store(exp)
+
+        replay_memory = memory
 
     # Record videos
     # Use the gym env Monitor wrapper
@@ -473,11 +492,11 @@ def deep_q_learning(sess,
             next_total_state = np.stack([next_state], axis=0)
 
             # If our replay memory is full, pop the first element
-            if len(replay_memory) == replay_memory_size:
-                replay_memory.pop(0)
+            # if replay_memory.tree.data_pointer == replay_memory_size:
+            #     replay_memory.pop(0)
 
             # Save transition to replay memory
-            replay_memory.append(Transition(total_state, action, reward, next_total_state, done))
+            memory.store(Transition(total_state, action, reward, next_total_state, done))
 
             # Update statistics
             stats.episode_rewards[i_episode] += reward
@@ -493,11 +512,16 @@ def deep_q_learning(sess,
                 dist = env.mario.rect.x
             stats.episode_total_death[i_episode] = total_deaths
 
-            # Sample a minibatch from the replay memory
-            samples = random.sample(replay_memory, batch_size)
-            states_batch, action_batch, reward_batch, next_states_batch, done_batch = map(np.array, zip(*samples))
-            next_states_batch = np.squeeze(next_states_batch)
-            # Calculate q values and targets (Double DQN)
+            tree_idx, batch, ISWeights = memory.sample(batch_size)
+
+            states_batch = np.array([each[0][0] for each in batch], ndmin=3)
+            action_batch = np.array([each[0][1] for each in batch])
+            reward_batch = np.array([each[0][2] for each in batch])
+            next_states_batch = np.array([each[0][3] for each in batch], ndmin=3)
+            done_batch = np.array([each[0][4] for each in batch])
+
+            # Calculate q values and targets (Double DQN)coins_left
+            next_states_batch = next_states_batch.squeeze()
             q_values_next = q_estimator.predict(sess, next_states_batch)
 
             q_values_next_total = q_values_next
@@ -509,9 +533,11 @@ def deep_q_learning(sess,
                             (discount_factor * q_values_next_target[np.arange(batch_size), best_actions])
 
             # Perform gradient descent update
-            states_batch = np.squeeze(states_batch)
+            states_batch = states_batch.squeeze()
+            targets_batch = targets_batch.squeeze()
 
-            loss1 = q_estimator.update(sess, states_batch, action_batch, targets_batch)
+            loss1, abs_error = q_estimator.update(sess, states_batch, action_batch, targets_batch,
+                                                  ISWeights)
 
             loss = loss1
 
@@ -584,12 +610,12 @@ if __name__ == "__main__":
                                         num_episodes=100000,
                                         replay_memory_size=ER_SIZE,
                                         replay_memory_init_size=5000,
-                                        update_target_estimator_every=UPDATE_TARGET_STEP,
+                                        update_target_estimator_every=1000,
                                         epsilon_start=1.0,
-                                        epsilon_end=MIN_EPSILON,
-                                        epsilon_decay_steps=200000,
-                                        discount_factor=DISCOUNT_FACTOR,
-                                        batch_size=BATCH_SIZE,
+                                        epsilon_end=0.1,
+                                        epsilon_decay_steps=EPSILON_DECAY_STEPS,
+                                        discount_factor=0.99,
+                                        batch_size=32,
                                         selfishness=1.0):
 
             print("\nEpisode Reward: {}".format(stats.episode_rewards[-1]))

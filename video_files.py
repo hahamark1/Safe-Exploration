@@ -7,7 +7,7 @@ import cv2
 VIDEO_FILE = 'VIDEO'
 
 def make_video(screen, _image_num, video_path):
-    _image_num += 1
+    # _image_num += 1
     str_num = "000" + str(_image_num)
     file_name = "{}/{}.jpg".format(video_path, str_num[-4:])
     pygame.image.save(screen, file_name)
@@ -31,8 +31,16 @@ def create_video_from_images(video_path, experiment_name, outimg=None, fps=60, s
     """
     fourcc = VideoWriter_fourcc(*'XVID')
     vid = None
-    outvid = '{}/videos/{}.avi'.format(os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(video_path)))), experiment_name)
+
+    vid_path = '{}/videos/'.format(os.path.dirname(os.path.dirname(video_path)))
+
+    if not os.path.exists(vid_path):
+        os.makedirs(vid_path)
+    print(vid_path)
+
+    outvid = '{}{}.avi'.format(vid_path, experiment_name)
     print(outvid)
+
     for file in sorted(os.listdir(video_path)):
         file_path = os.path.join(video_path, file)
 
