@@ -300,7 +300,7 @@ def run_Q_learner(network, dynamic_holes, gridworld_size, i):
 
 
 def google_experiment(network, dynamic_holes, number_of_epochs):
-    Trainer = trainer_Q_network(network=network, dynamic_holes=dynamic_holes, num_episodes=number_of_epochs, save_every=1000, plot_every=5, change=True)
+    Trainer = trainer_Q_network(network=network, dynamic_holes=dynamic_holes, num_episodes=number_of_epochs, save_every=5000, plot_every=5000, change=True)
     Trainer.run_episodes()
 
 
