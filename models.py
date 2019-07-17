@@ -65,7 +65,7 @@ class SimpleCNN(torch.nn.Module):
         self.hidden_channels = 3
         self.hidden_fc = 16
         self.output_size = 4
-        self.embeddings_size = EMBEDDING_SIZE
+        self.embeddings_size = 4
         self.embedding = embedding
         # Input channels = 3, output channels = 18
         if embedding:

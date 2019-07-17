@@ -106,7 +106,7 @@ class trainer_Q_network(object):
                  memory_size=MEMORY_SIZE, seed=SEED, discount_factor=DISCOUNT_FACTOR,
                  headless=True, learning_rate=LEARNING_RATE, batch_size=BATCH_SIZE,
                  dynamic_holes=DYNAMIC_HOLES, dynamic_start=DYNAMIC_START, load_episode=False, save_every=SAVE_EVERY,
-                 plot_every=PLOT_EVERY, plotting=False, embedding=EMBEDDING, gridworld_size=7):
+                 plot_every=PLOT_EVERY, plotting=False, embedding=EMBEDDING, gridworld_size=7, change=False):
 
         self.num_episodes = num_episodes
         self.memory = ReplayMemory(memory_size)
@@ -114,10 +114,10 @@ class trainer_Q_network(object):
 
 
         if embedding and network.__class__.__name__ != 'SimpleCNN':
-            self.env = GridworldGym(headless=headless, dynamic_holes=dynamic_holes, dynamic_start=dynamic_start, embedding=embedding)
+            self.env = GridworldGym(headless=headless, dynamic_holes=dynamic_holes, dynamic_start=dynamic_start, embedding=embedding, constant_change=change)
             self.network = network(embedding=embedding).to(device)
         else :
-            self.env = GridworldGym(headless=headless, dynamic_holes=dynamic_holes, dynamic_start=dynamic_start)
+            self.env = GridworldGym(headless=headless, dynamic_holes=dynamic_holes, dynamic_start=dynamic_start,constant_change=change)
             self.network = network().to(device)
         self.initialize(seed)
         self.batch_size = batch_size
@@ -289,7 +289,7 @@ def run_Q_learner(network, dynamic_holes, gridworld_size, i):
 
 
 def google_experiment(network, dynamic_holes, number_of_epochs):
-    Trainer = trainer_Q_network(network=network, dynamic_holes=dynamic_holes, num_episodes=number_of_epochs, save_every=1000, plot_every=500)
+    Trainer = trainer_Q_network(network=network, dynamic_holes=dynamic_holes, num_episodes=number_of_epochs, save_every=1000, plot_every=500, change=True)
     Trainer.run_episodes()
 
 
@@ -306,7 +306,7 @@ if __name__ == "__main__":
     #
     # Parallel(n_jobs=4)(delayed(run_Q_learner) (network, False, size, i) for network in network_poss for size in gridworld_sizes for i in range(number_of_experiments))
     # trainer_Q_network(network=SimpleCNN, dynamic_holes=True, dynamic_start=False)
-
+    # google_experiment(SimpleCNN, True, 10)
     dynamic_holes_poss = [True, False]
     network_poss = [DQN, SimpleCNN]
     Parallel(n_jobs=4)(

@@ -29,11 +29,15 @@ class GridworldGym(gym.Env):
         self.action_space = spaces.Discrete(4)
         self.gridworld_size = gridworld_size
         self.num_holes = gridworld_size - 2
-        self.fig = plt.figure()
+
+        if not self.headless:
+            self.fig = plt.figure()
+            plt.ion()
+
         self.change = constant_change
         self.embedding = embedding
         self.observation_space = spaces.Box(low=-10000000, high=100000000, dtype=np.float, shape=(7, 7, 2))
-        plt.ion()
+
         self.hole_pos = False
         self.reset()
 
