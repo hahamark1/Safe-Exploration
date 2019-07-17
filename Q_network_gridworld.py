@@ -129,6 +129,7 @@ class trainer_Q_network(object):
         self.num_deaths = 0
         self.episode_durations = []
         self.number_of_deaths = []
+        self.google = True
         self.rewards = []
         self.steps = 0
         self.loss = 0
@@ -224,8 +225,10 @@ class trainer_Q_network(object):
                 self.save_model()
 
             if self.episode_number % self.plot_every == 0:
-                self.plot_results()
-
+                if not self.google:
+                    self.plot_results()
+                else:
+                    self.save_results()
 
     def save_model(self):
 
@@ -276,6 +279,14 @@ class trainer_Q_network(object):
         print('The current number of deaths is {} after {} episodes'.format(self.num_deaths, self.episode_number))
         plt.close()
 
+    def save_results(self):
+        fn = '{}/{}_data.pt'.format(self.fig_folder, self.experiment_name))
+
+        data = {'Episode_durations': self.episode_durations, 'Rewards': self.rewards, 'Number of Deaths': self.number_of_deaths}
+
+        with open(fn, "wb") as pf:
+            pickle.dump(data, pf)
+
 def run_Q_learner(network, dynamic_holes, gridworld_size, i):
     Trainer = trainer_Q_network(network=network, dynamic_holes=dynamic_holes, gridworld_size=gridworld_size)
     Trainer.run_episodes()
@@ -298,17 +309,15 @@ if __name__ == "__main__":
 
     # dynamic_holes_poss = [True, False]
     # dynamic_start_poss = [True, False]
-    # # # network_poss = [QNetwork, QNetwork_deeper, DQN]
-    # network_poss = [QNetwork, SimpleCNN]
-    # gridworld_sizes = [x for x in range(3,33)]
-    # # embeddings = [True, False]
-    # number_of_experiments = 10
-    #
-    # Parallel(n_jobs=4)(delayed(run_Q_learner) (network, False, size, i) for network in network_poss for size in gridworld_sizes for i in range(number_of_experiments))
-    # trainer_Q_network(network=SimpleCNN, dynamic_holes=True, dynamic_start=False)
+    network_poss = [QNetwork, SimpleCNN]
+    gridworld_sizes = [x for x in range(3,33)]
+    number_of_experiments = 10
+
+    Parallel(n_jobs=4)(delayed(run_Q_learner) (network, False, size, i) for network in network_poss for size in gridworld_sizes for i in range(number_of_experiments))
+    trainer_Q_network(network=SimpleCNN, dynamic_holes=True, dynamic_start=False)
     # google_experiment(SimpleCNN, True, 10)
-    dynamic_holes_poss = [True, False]
-    network_poss = [DQN, SimpleCNN]
-    Parallel(n_jobs=4)(
-        delayed(google_experiment) (network, True, 1000000) for network in network_poss)
+    # dynamic_holes_poss = [True, False]
+    # network_poss = [DQN, SimpleCNN]
+    # Parallel(n_jobs=4)(
+    #     delayed(google_experiment) (network, True, 1000000) for network in network_poss)
 
