@@ -280,7 +280,7 @@ class trainer_Q_network(object):
         plt.close()
 
     def save_results(self):
-        fn = '{}/{}_data.pt'.format(self.fig_folder, self.experiment_name))
+        fn = '{}/{}_data.pt'.format(self.fig_folder, self.experiment_name)
 
         data = {'Episode_durations': self.episode_durations, 'Rewards': self.rewards, 'Number of Deaths': self.number_of_deaths}
 
@@ -300,7 +300,7 @@ def run_Q_learner(network, dynamic_holes, gridworld_size, i):
 
 
 def google_experiment(network, dynamic_holes, number_of_epochs):
-    Trainer = trainer_Q_network(network=network, dynamic_holes=dynamic_holes, num_episodes=number_of_epochs, save_every=1000, plot_every=500, change=True)
+    Trainer = trainer_Q_network(network=network, dynamic_holes=dynamic_holes, num_episodes=number_of_epochs, save_every=1000, plot_every=5, change=True)
     Trainer.run_episodes()
 
 
@@ -309,15 +309,15 @@ if __name__ == "__main__":
 
     # dynamic_holes_poss = [True, False]
     # dynamic_start_poss = [True, False]
-    network_poss = [QNetwork, SimpleCNN]
-    gridworld_sizes = [x for x in range(3,33)]
-    number_of_experiments = 10
-
-    Parallel(n_jobs=4)(delayed(run_Q_learner) (network, False, size, i) for network in network_poss for size in gridworld_sizes for i in range(number_of_experiments))
-    trainer_Q_network(network=SimpleCNN, dynamic_holes=True, dynamic_start=False)
+    # network_poss = [QNetwork, SimpleCNN]
+    # gridworld_sizes = [x for x in range(3,33)]
+    # number_of_experiments = 10
+    #
+    # Parallel(n_jobs=4)(delayed(run_Q_learner) (network, False, size, i) for network in network_poss for size in gridworld_sizes for i in range(number_of_experiments))
+    # trainer_Q_network(network=SimpleCNN, dynamic_holes=True, dynamic_start=False)
     # google_experiment(SimpleCNN, True, 10)
-    # dynamic_holes_poss = [True, False]
-    # network_poss = [DQN, SimpleCNN]
-    # Parallel(n_jobs=4)(
-    #     delayed(google_experiment) (network, True, 1000000) for network in network_poss)
+    dynamic_holes_poss = [True, False]
+    network_poss = [DQN, SimpleCNN]
+    Parallel(n_jobs=4)(
+        delayed(google_experiment) (network, True, 1000000) for network in network_poss)
 
