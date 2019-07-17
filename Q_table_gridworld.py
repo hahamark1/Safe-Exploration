@@ -10,7 +10,7 @@ from datetime import datetime
 
 from GridworldGym import GridworldGym
 
-env = GridworldGym()
+env = GridworldGym(headless=False, dynamic_holes=True)
 
 class EmphaticQLearner():
 
@@ -21,18 +21,18 @@ class EmphaticQLearner():
         self.learning_rate = 0.05
         self.future_discount = 0.99
         self.selfishness = 0.5
-        self.writer = tf.summary.FileWriter(f'logs/LRLearning3.0/{str(datetime.now())}')
+        self.writer = tf.summary.FileWriter(f'logs/Q_Tab_Grid/{str(datetime.now())}')
         self.step = 0
+        self.episodes = 0
         self.log_q_values=[[]]
-
+        self.total_death = 0
+        self.total_succeed = 0
         for i in range(10000000):
             self.step += 1
             if self.epsilon > 0.1:
                 self.epsilon = self.epsilon * 0.999999
 
             self.Q_learning()
-
-            EmpathicQLearner.py
 
 
     def log_scalar(self, tag, value, global_step):
@@ -68,7 +68,6 @@ class EmphaticQLearner():
             with open('Q_values.pickle', 'wb') as handle:
                 pickle.dump(self.Q_values, handle, protocol=pickle.HIGHEST_PROTOCOL)
                 self.rewards = [0]
-                self.enemies_killed = [0]
         else:
             with open('Q_values.pickle', 'rb') as handle:
                 self.Q_values = pickle.load(handle)
@@ -79,64 +78,67 @@ class EmphaticQLearner():
 
     def do_game_step(self, move):
 
-        next_total_state, reward, done, info = env.step(move)
+        next_state, reward, done, info = env.step(move)
+
         if done:
             env.reset()
+            self.rewards[-1] += reward
             self.log_scalar('reward', self.rewards[-1], self.step)
-            self.log_scalar('kills', self.enemies_killed[-1], self.step)
             self.log_scalar('epsilon', self.epsilon, self.step)
             self.log_scalar('mean_q', np.mean(self.log_q_values[-1]), self.step)
             self.log_histogram('q_values', np.array(self.log_q_values[-1]), self.step, 20)
             self.rewards.append(0)
-            self.enemies_killed.append(0)
             self.log_q_values.append([])
 
-        return reward, done, info
+        return next_state, reward, done, info
 
-    def level_to_key(self):
-        obs = env.get_observation()
-        obs1 = tuple(map(tuple, obs[:, :, 0]))
-        obs2 = tuple(map(tuple, obs[:, :, 1]))
-        return obs1, obs2
+    def level_to_key(self, obs):
+        obs1 = tuple(map(tuple, obs))
+        return obs1
 
 
-    def get_best_action(self):
+    def get_best_action(self, state):
         max_Q = -np.inf
         best_action = None
-        level_key, enemy_level_key = self.level_to_key()
-        if level_key not in self.Q_values:
-            self.Q_values[level_key] = {}
-        if enemy_level_key not in self.Q_values:
-            self.Q_values[enemy_level_key] = {}
+        if state not in self.Q_values:
+            self.Q_values[state] = {}
         for action in range(4):
-            if action not in self.Q_values[level_key]:
-                self.Q_values[level_key][action] = 100
-            if action not in self.Q_values[enemy_level_key]:
-                self.Q_values[enemy_level_key][action] = 100
-            if self.Q_values[level_key][action] >= max_Q:
-                max_Q = self.Q_values[level_key][action]
+            if action not in self.Q_values[state]:
+                self.Q_values[state][action] = 1
+            if self.Q_values[state][action] >= max_Q:
+                max_Q = self.Q_values[state][action]
                 best_action = action
-        enemy_V = np.mean(list(self.Q_values[enemy_level_key].values()))
-        return best_action, max_Q, enemy_V
+        return best_action, max_Q
 
     def Q_learning(self):
-        state, enemy_state = self.level_to_key()
-        best_action, max_Q, enemy_V = self.get_best_action()
+        state = env.get_observation()
+        state_key = self.level_to_key(state)
+        best_action, max_Q = self.get_best_action(state_key)
         if np.random.random() > self.epsilon:
             action = best_action
-            reward, done, info = self.do_game_step(action)
+            next_state, reward, done, info = self.do_game_step(action)
         else:
             action = random.choice(range(4))
-            reward, done, info = self.do_game_step(action)
+            next_state, reward, done, info = self.do_game_step(action)
 
-        _, new_Q, new_enemy_V = self.get_best_action()
-        value = self.selfishness * (1 - done) * (reward + self.future_discount * new_Q) + (1 - self.selfishness) * new_enemy_V
-        self.Q_values[state][action] = (1-self.learning_rate)*self.Q_values[state][action] + self.learning_rate*value
+        new_state_key = self.level_to_key(next_state)
+        _, new_Q = self.get_best_action(new_state_key)
+        value =  (reward + self.future_discount * new_Q)
+        self.Q_values[state_key][action] = (1-self.learning_rate)*self.Q_values[state_key][action] + self.learning_rate*value
 
-        self.rewards[-1] += reward
-        self.enemies_killed[-1] += info['num_killed']
+        # self.rewards[-1] += reward
+        if 'death' in info:
+            self.total_death += info['death']
+        if 'succeed' in info:
+            self.total_succeed += info['succeed']
         self.log_q_values[-1].append(max_Q)
-        print(f'average reward: {np.mean(self.rewards)},    epsilon: {self.epsilon}')
+        if done:
+            self.episodes += 1
+            if len(self.rewards) > 500:
+                average_last = np.mean(self.rewards[-500:])
+            else:
+                average_last = np.mean(self.rewards)
+            print(f'Currently at episode: {self.episodes},     average rewardlast 500: {average_last},    last reward: {self.rewards[-2]},    epsilon: {self.epsilon},     total death: {self.total_death},       total succeed: {self.total_succeed}')
 
 
 

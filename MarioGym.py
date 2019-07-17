@@ -74,7 +74,7 @@ class MarioGym(gym.Env):
 
         return self.observation
 
-    def step(self, action_num):
+    def step(self, action_num, ):
         self.steps += 1
         action = MOVES[action_num]
         # action = 'doNothing'
@@ -191,34 +191,55 @@ class MarioGym(gym.Env):
 
         return COIN_REWARD * reward
 
-    def level_to_numpy(self):
+    def level_to_numpy(self, other_agent=False):
+        mult = 1
         granularity = 8
 
         padding = int(256/granularity)
         level_size = self.level.levelLength*padding
-        array = np.zeros((level_size, level_size))
+        array = np.zeros((EMBEDDING_SIZE, level_size, level_size))
         granx = int(level_size / MAP_HEIGHT)
         grany = int(level_size / MAP_WIDTH)
+
+        if other_agent:
+            mult *+ -1
 
         y_axis_1 = int(round(self.mario.rect.top/granularity))
         y_axis_2 = int(round(self.mario.rect.bottom / granularity))
         x_axis_1 = int(round(self.mario.rect.left/granularity))
         x_axis_2 = int(round(self.mario.rect.right / granularity))
-        array[y_axis_1: y_axis_2, x_axis_1: x_axis_2] = -1
+
+        if other_agent:
+            array[EMBEDDINGS['Other_agents'], y_axis_1: y_axis_2, x_axis_1: x_axis_2] = 1
+        else:
+            array[EMBEDDINGS['Mario'], y_axis_1: y_axis_2, x_axis_1: x_axis_2] = 1
+
+        if self.experiment == 'FD':
+            y_axis_1 = int(round(self.mario2.rect.top / granularity))
+            y_axis_2 = int(round(self.mario2.rect.bottom / granularity))
+            x_axis_1 = int(round(self.mario2.rect.left / granularity))
+            x_axis_2 = int(round(self.mario2.rect.right / granularity))
+            if other_agent:
+                array[EMBEDDINGS['Mario'], y_axis_1: y_axis_2, x_axis_1: x_axis_2] = 1
+            else:
+                array[EMBEDDINGS['Other_agents'], y_axis_1: y_axis_2, x_axis_1: x_axis_2] = 1
+
+
+
         for entity in self.level.entityList:
             y_axis_1 = int(round(entity.rect.top / granularity))
             y_axis_2 = int(round(entity.rect.bottom / granularity))
             x_axis_1 = int(round(entity.rect.left / granularity))
             x_axis_2 = int(round(entity.rect.right / granularity))
             if entity.__class__.__name__ == 'Koopa' or entity.__class__.__name__ == 'Goomba' or entity.__class__.__name__ == 'GoombaHeadless':
-                array[y_axis_1: y_axis_2, x_axis_1: x_axis_2] = 1
+                array[EMBEDDINGS['Animal'], y_axis_1: y_axis_2, x_axis_1: x_axis_2] = 1
             elif entity.__class__.__name__ == 'Coin' or entity.__class__.__name__ == 'CoinHeadless':
-                array[y_axis_1: y_axis_2, x_axis_1: x_axis_2] = 2
+                array[EMBEDDINGS['Coin'], y_axis_1: y_axis_2, x_axis_1: x_axis_2] = 1
             elif entity.__class__.__name__ == 'RandomBox':
                 if not entity.triggered:
-                    array[y_axis_1: y_axis_2, x_axis_1: x_axis_2] = 3
+                    array[EMBEDDINGS['Random_box'], y_axis_1: y_axis_2, x_axis_1: x_axis_2] = 1
                 else:
-                    array[y_axis_1: y_axis_2, x_axis_1: x_axis_2] = 4
+                    array[EMBEDDINGS['Random_box_trig'], y_axis_1: y_axis_2, x_axis_1: x_axis_2] = 1
 
         for layer in self.level.level:
             for ground in layer:
@@ -228,7 +249,7 @@ class MarioGym(gym.Env):
                     x_axis_1 = int(round(ground.rect.left / granularity))
                     x_axis_2 = int(round(ground.rect.right / granularity))
 
-                    array[y_axis_1: y_axis_2, x_axis_1: x_axis_2] = 5
+                    array[EMBEDDINGS['Ground'], y_axis_1: y_axis_2, x_axis_1: x_axis_2] = 1
         for layer in self.level.level[13:17]:
             for index in range(len(layer)):
                 if not layer[index].rect and layer[index-1].rect:
@@ -238,7 +259,7 @@ class MarioGym(gym.Env):
                     width = layer[index-1].rect.right - layer[index-1].rect.left
                     x_axis_2 = int(round((layer[index-1].rect.right + 2 * width) / granularity))
 
-                    array[y_axis_1: y_axis_2, x_axis_1: x_axis_2] = -5
+                    array[EMBEDDINGS['Hole'], y_axis_1: y_axis_2, x_axis_1: x_axis_2] = 1
 
         if self.partial_observation:
             left_paddding = int(round(self.mario.rect.y / granularity))
@@ -248,9 +269,9 @@ class MarioGym(gym.Env):
             x3 = int(round(self.mario.rect.x / granularity)) - min(upper_padding, padding)
             x4 = int(round(self.mario.rect.x / granularity)) + (2 * padding - min(upper_padding, padding))
 
-            numpy_frame = array[x1: x2, x3: x4]
+            numpy_frame = array[:, x1: x2, x3: x4]
         else:
-            numpy_frame = array[0:MAP_HEIGHT, 0:MAP_WIDTH]
+            numpy_frame = array[:,0:MAP_HEIGHT, 0:MAP_WIDTH]
 
         return numpy_frame
 

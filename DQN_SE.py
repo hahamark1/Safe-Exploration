@@ -18,8 +18,13 @@ from collections import deque, namedtuple
 import matplotlib.pyplot as plt
 import numpy as np
 from constants import *
+from argparser import parser
+from PER import SumTree, Memory
 
-env = MarioGym(HEADLESS, step_size=STEP_SIZE, level_name=LEVEL_NAME, partial_observation=PARTIAL_OBSERVATION, distance_reward=DISTANCE_REWARD)
+arguments = parser.parse_args()
+
+env = MarioGym(HEADLESS, step_size=STEP_SIZE, level_name=LEVEL_NAME, partial_observation=PARTIAL_OBSERVATION, distance_reward=DISTANCE_REWARD, experiment=EXPERIMENT)
+
 
 
 class StateProcessor():
@@ -29,9 +34,9 @@ class StateProcessor():
     def __init__(self):
         # Build the Tensorflow graph
         with tf.variable_scope("state_processor"):
-            self.input_state = tf.placeholder(shape=[MAP_HEIGHT, MAP_WIDTH], dtype=tf.uint8)
+            self.input_state = tf.placeholder(shape=[EMBEDDING_SIZE, MAP_HEIGHT, MAP_WIDTH], dtype=tf.uint8)
 
-            self.output1 = tf.expand_dims(self.input_state[:,:], 2)
+            self.output1 = tf.expand_dims(self.input_state[:,:], -1)
 
             self.output1 = tf.image.resize_images(
                 self.output1, [IMAGE_SIZE, IMAGE_SIZE], method=tf.image.ResizeMethod.BILINEAR)
@@ -83,7 +88,7 @@ class Estimator():
 
         # Placeholders for our input
         # Our input are WINDOW_LENGTH RGB frames of shape 160, 160 each
-        self.X_pl = tf.placeholder(shape=[None, WINDOW_LENGTH, IMAGE_SIZE, IMAGE_SIZE], dtype=tf.uint8, name="X")
+        self.X_pl = tf.placeholder(shape=[None, WINDOW_LENGTH, EMBEDDING_SIZE, IMAGE_SIZE, IMAGE_SIZE], dtype=tf.uint8, name="X")
         # The TD target val84,  84ue
         self.y_pl = tf.placeholder(shape=[None], dtype=tf.float32, name="y")
         # Integer id of which action was selected
@@ -93,11 +98,11 @@ class Estimator():
         batch_size = tf.shape(self.X_pl)[0]
 
         # Three convolutional layers
-        conv1 = tf.contrib.layers.conv2d(
+        conv1 = tf.contrib.layers.conv3d(
             X, CONV_1, 8, 4, activation_fn=tf.nn.relu)
-        conv2 = tf.contrib.layers.conv2d(
+        conv2 = tf.contrib.layers.conv3d(
             conv1, CONV_2, 4, 2, activation_fn=tf.nn.relu)
-        conv3 = tf.contrib.layers.conv2d(
+        conv3 = tf.contrib.layers.conv3d(
             conv2, CONV_3, 3, 1, activation_fn=tf.nn.relu)
 
         # Fully connected layers
@@ -165,7 +170,6 @@ class Estimator():
         if self.summary_writer:
             self.summary_writer.add_summary(summaries, global_step)
         return loss
-
 def copy_model_parameters(sess, estimator1, estimator2):
     """
     Copies the model parameters of one estimator to another.
@@ -375,7 +379,7 @@ def deep_q_learning(sess,
     total_state = env.reset(levelname=LEVEL_NAME)
     state = state_processor.process(sess, total_state, 1)
     state = np.stack([state] * WINDOW_LENGTH, axis=0)
-
+    total_state = np.stack([state], axis=0)
     total_death = 0
 
 
@@ -464,6 +468,11 @@ def deep_q_learning(sess,
 
             # Take a step
             action_probs = policy(sess, state, epsilon)
+            #TODO: Implement the second agent action probs given a same network setting.
+            if SECOND_AGENT_ACTION == 'SAME_NETWORK':
+                second_action_state = env.env.level_to_numpy(other_agent=True)
+
+
             action = np.random.choice(np.arange(len(action_probs)), p=action_probs)
             next_total_state, reward, done, info = env.step(VALID_ACTIONS[action])
             level_up = 0
@@ -473,11 +482,14 @@ def deep_q_learning(sess,
             next_total_state = np.stack([next_state], axis=0)
 
             # If our replay memory is full, pop the first element
-            if len(replay_memory) == replay_memory_size:
+            if len(replay_memory) == REPLAY_MEMORY_SIZE:
                 replay_memory.pop(0)
 
             # Save transition to replay memory
-            replay_memory.append(Transition(total_state, action, reward, next_total_state, done))
+            if PRIORITIZE_MEMORY:
+                replay_memory.store(Transition(total_state, action, reward, next_total_state, done))
+            else:
+                replay_memory.append(Transition(total_state, action, reward, next_total_state, done))
 
             # Update statistics
             stats.episode_rewards[i_episode] += reward
@@ -493,9 +505,20 @@ def deep_q_learning(sess,
                 dist = env.mario.rect.x
             stats.episode_total_death[i_episode] = total_deaths
 
-            # Sample a minibatch from the replay memory
-            samples = random.sample(replay_memory, batch_size)
-            states_batch, action_batch, reward_batch, next_states_batch, done_batch = map(np.array, zip(*samples))
+            if PRIORITIZE_MEMORY:
+                tree_idx, batch, ISWeights = memory.sample(batch_size)
+
+                states_batch = np.array([each[0][0] for each in batch], ndmin=3)
+                action_batch = np.array([each[0][1] for each in batch])
+                reward_batch = np.array([each[0][2] for each in batch])
+                next_states_batch = np.array([each[0][3] for each in batch], ndmin=3)
+                done_batch = np.array([each[0][4] for each in batch])
+            else:
+                # Sample a minibatch from the replay memory
+                samples = random.sample(replay_memory, batch_size)
+                states_batch, action_batch, reward_batch, next_states_batch, done_batch = map(np.array, zip(*samples))
+
+
             next_states_batch = np.squeeze(next_states_batch)
             # Calculate q values and targets (Double DQN)
             q_values_next = q_estimator.predict(sess, next_states_batch)
@@ -505,13 +528,19 @@ def deep_q_learning(sess,
             best_actions = np.argmax(q_values_next_total, axis=1)
             q_values_next_target = target_estimator.predict(sess, next_states_batch)
 
-            targets_batch = reward_batch + np.invert(done_batch).astype(np.float32) * \
+            targets_batch = reward_batch +  \
                             (discount_factor * q_values_next_target[np.arange(batch_size), best_actions])
 
             # Perform gradient descent update
             states_batch = np.squeeze(states_batch)
 
-            loss1 = q_estimator.update(sess, states_batch, action_batch, targets_batch)
+            if PRIORITIZE_MEMORY:
+                targets_batch = targets_batch.squeeze()
+
+                loss1, abs_error = q_estimator.update(sess, states_batch, action_batch, targets_batch,
+                                                      ISWeights)
+            else:
+                loss1 = q_estimator.update(sess, states_batch, action_batch, targets_batch)
 
             loss = loss1
 

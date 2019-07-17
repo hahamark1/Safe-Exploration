@@ -1,4 +1,4 @@
-EXPERIMENT = 'FD'
+EXPERIMENT = 'SE'
 
 VALID_ACTIONS = [0, 1, 2, 3,4 ,5 ]
 WINDOW_LENGTH = 4
@@ -8,10 +8,21 @@ CONV_2 = 8
 CONV_3 = 16
 MAX_PIXEL = 255.0
 
-EXPERIMENT_NAME = 'safe_exploration_6.7'
-HEADLESS = False
-# LEVEL_NAME = 'Level-basic-one-hole.json'
-LEVEL_NAME = 'Level-5-coins.json'
+EMBEDDINGS = {'Mario': 1,
+              'Other_agents': 2,
+              'Ground': 3,
+              'Hole': 4,
+              'Animal': 5,
+              'Coin': 6,
+              'Random_box': 7,
+              'Random_box_trig': 8
+}
+EMBEDDING_SIZE = len(EMBEDDINGS.keys()) + 1
+
+EXPERIMENT_NAME = 'safe_exploration_7.4'
+HEADLESS = True
+LEVEL_NAME = 'Level-basic-one-hole-three-coins.json'
+# LEVEL_NAME = 'Level-5-coins.json'
 ER_SIZE = 100000
 PARTIAL_OBSERVATION = False
 DISTANCE_REWARD = True
@@ -47,3 +58,5 @@ Epsilon_network = 1e-6
 DISCOUNT_FACTOR = 0.99
 BATCH_SIZE = 32
 UPDATE_TARGET_STEP = 1000
+
+SECOND_AGENT_ACTION = 'RANDOM' # in ['RANDOM', 'SAME_NETWORK']

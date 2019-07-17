@@ -32,14 +32,7 @@ class EmphaticQLearner():
 
             self.Q_learning()
 
-            # with open('q_values.pickle', 'wb') as handle:
-            #     pickle.dump(self.Q_values, handle, protocol=pickle.HIGHEST_PROTOCOL)
-            #
-            # with open('coins_collected.pickle', 'wb') as handle:
-            #     pickle.dump(self.rewards, handle, protocol=pickle.HIGHEST_PROTOCOL)
-            #
-            # with open('goombas_killed.pickle', 'wb') as handle:
-            #     pickle.dump(self.enemies_killed, handle, protocol=pickle.HIGHEST_PROTOCOL)
+            EmpathicQLearner.py
 
 
     def log_scalar(self, tag, value, global_step):

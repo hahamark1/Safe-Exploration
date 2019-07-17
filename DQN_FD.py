@@ -29,9 +29,9 @@ class StateProcessor():
     def __init__(self):
         # Build the Tensorflow graph
         with tf.variable_scope("state_processor"):
-            self.input_state = tf.placeholder(shape=[MAP_HEIGHT, MAP_WIDTH], dtype=tf.uint8)
+            self.input_state = tf.placeholder(shape=[EMBEDDING_SIZE, MAP_HEIGHT, MAP_WIDTH], dtype=tf.uint8)
 
-            self.output1 = tf.expand_dims(self.input_state[:,:], 2)
+            self.output1 = tf.expand_dims(self.input_state[:,:], -1)
 
             self.output1 = tf.image.resize_images(
                 self.output1, [IMAGE_SIZE, IMAGE_SIZE], method=tf.image.ResizeMethod.BILINEAR)
@@ -83,7 +83,7 @@ class Estimator():
 
         # Placeholders for our input
         # Our input are WINDOW_LENGTH RGB frames of shape 160, 160 each
-        self.X_pl = tf.placeholder(shape=[None, WINDOW_LENGTH, IMAGE_SIZE, IMAGE_SIZE], dtype=tf.uint8, name="X")
+        self.X_pl = tf.placeholder(shape=[None, WINDOW_LENGTH, EMBEDDING_SIZE, IMAGE_SIZE, IMAGE_SIZE], dtype=tf.uint8, name="X")
         # The TD target val84,  84ue
         self.y_pl = tf.placeholder(shape=[None], dtype=tf.float32, name="y")
         # Integer id of which action was selected
@@ -93,11 +93,11 @@ class Estimator():
         batch_size = tf.shape(self.X_pl)[0]
 
         # Three convolutional layers
-        conv1 = tf.contrib.layers.conv2d(
+        conv1 = tf.contrib.layers.conv3d(
             X, CONV_1, 8, 4, activation_fn=tf.nn.relu)
-        conv2 = tf.contrib.layers.conv2d(
+        conv2 = tf.contrib.layers.conv3d(
             conv1, CONV_2, 4, 2, activation_fn=tf.nn.relu)
-        conv3 = tf.contrib.layers.conv2d(
+        conv3 = tf.contrib.layers.conv3d(
             conv2, CONV_3, 3, 1, activation_fn=tf.nn.relu)
 
         # Fully connected layers
@@ -359,7 +359,6 @@ def deep_q_learning(sess,
 
     total_t = sess.run(tf.contrib.framework.get_global_step())
 
-    # The epsilon decay schedule
     epsilons = np.linspace(epsilon_start, epsilon_end, epsilon_decay_steps)
 
     # The policy we're following
@@ -375,7 +374,7 @@ def deep_q_learning(sess,
     total_state = env.reset(levelname=LEVEL_NAME)
     state = state_processor.process(sess, total_state, 1)
     state = np.stack([state] * WINDOW_LENGTH, axis=0)
-
+    total_state = np.stack([state], axis=0)
     total_death = 0
 
 
@@ -404,7 +403,6 @@ def deep_q_learning(sess,
             next_state = np.append(state[1:,:,:], np.expand_dims(next_state, 0), axis=0)
 
             next_total_state = np.stack([next_state], axis=0)
-
 
             replay_memory.append(Transition(total_state, action, reward, next_total_state, done))
             if done:
@@ -510,6 +508,7 @@ def deep_q_learning(sess,
 
             # Perform gradient descent update
             states_batch = np.squeeze(states_batch)
+
 
             loss1 = q_estimator.update(sess, states_batch, action_batch, targets_batch)
 
