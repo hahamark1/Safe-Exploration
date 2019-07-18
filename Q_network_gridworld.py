@@ -331,7 +331,7 @@ if __name__ == "__main__":
     # google_experiment(SimpleCNN, True, 10)
     dynamic_holes_poss = [True, False]
     network_poss = [DQN, SimpleCNN]
-    network_poss = [SimpleCNN]
+    # network_poss = [SimpleCNN]
     Parallel(n_jobs=4)(
         delayed(google_experiment) (network, True, 1000000) for network in network_poss)
 
