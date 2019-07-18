@@ -101,6 +101,20 @@ def check_conv_net(net):
             conv_net = True
     return conv_net
 
+def find_last_checkpoint(fn, folder):
+    files = []
+    for file in os.listdir(folder):
+        if file.startswith(fn):
+            files.append(file)
+
+    episodes = [int(file.split("=")[-1][:-3]) for file in files]
+    last_episode = max(episodes)
+
+    last_checkpoint = '{}/{}_ep={}.pt'.format(folder, fn, str(last_episode))
+
+    return last_checkpoint, last_episode
+
+
 class trainer_Q_network(object):
     def __init__(self, network=NETWORK, num_episodes=NUM_EPISODES,
                  memory_size=MEMORY_SIZE, seed=SEED, discount_factor=DISCOUNT_FACTOR,
@@ -142,7 +156,9 @@ class trainer_Q_network(object):
             raise ValueError('We cannot combine embeddings with a Feed-Forward network!')
 
         if load_episode:
-            self.load_model(load_episode)
+            last_checkpoint, episode = find_last_checkpoint(self.experiment_name, self.exp_folder)
+            self.episode_number = episode
+            self.load_model(last_checkpoint)
         # if not plotting:
         #     self.run_episodes()
         # else:
@@ -244,11 +260,8 @@ class trainer_Q_network(object):
             'deaths': self.number_of_deaths
         }, file_path)
 
-    def load_model(self, episode=False):
-        if episode:
-            file_path = '{}/{}_ep={}.pt'.format(self.exp_folder, self.experiment_name, episode)
-            self.episode_number = episode
-        else:
+    def load_model(self, file_path=False):
+        if not file_path:
             file_path = '{}/{}_ep={}.pt'.format(self.exp_folder, self.experiment_name, self.episode_number)
         checkpoint = torch.load(file_path)
 
@@ -300,7 +313,7 @@ def run_Q_learner(network, dynamic_holes, gridworld_size, i):
 
 
 def google_experiment(network, dynamic_holes, number_of_epochs):
-    Trainer = trainer_Q_network(network=network, dynamic_holes=dynamic_holes, num_episodes=number_of_epochs, save_every=5000, plot_every=5000, change=True)
+    Trainer = trainer_Q_network(network=network, dynamic_holes=dynamic_holes, num_episodes=number_of_epochs, save_every=5000, plot_every=5000, change=True, load_episode=True)
     Trainer.run_episodes()
 
 
@@ -318,6 +331,7 @@ if __name__ == "__main__":
     # google_experiment(SimpleCNN, True, 10)
     dynamic_holes_poss = [True, False]
     network_poss = [DQN, SimpleCNN]
+    network_poss = [SimpleCNN]
     Parallel(n_jobs=4)(
         delayed(google_experiment) (network, True, 1000000) for network in network_poss)
 
