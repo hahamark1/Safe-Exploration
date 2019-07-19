@@ -32,7 +32,7 @@ class DQN(nn.Module):
             self.conv1 = nn.Conv2d(EMBEDDING_SIZE, 8, kernel_size=3, stride=2)
         else:
             self.conv1 = nn.Conv2d(1, 8, kernel_size=3, stride=2)
-        self.bn1 = nn.BatchNorm2d(8)
+        # self.bn1 = nn.BatchNorm2d(8)
         self.conv2 = nn.Conv2d(8, 16, kernel_size=2, stride=2)
         # self.bn2 = nn.BatchNorm2d(16)
 
@@ -76,7 +76,7 @@ class SimpleCNN(torch.nn.Module):
         self.pool = torch.nn.MaxPool2d(kernel_size=2, stride=2, padding=0)
 
         # 4608 input features, 64 output features (see sizing flow below)
-        self.fc1 = torch.nn.Linear(self.hidden_channels * 3 * 3, self.hidden_fc)
+        self.fc1 = torch.nn.Linear(self.hidden_channels * self.input_size * self.input_size, self.hidden_fc)
 
         # 64 input features, 10 output features for our 10 defined classes
         self.fc2 = torch.nn.Linear(self.hidden_fc, self.output_size)
@@ -89,12 +89,12 @@ class SimpleCNN(torch.nn.Module):
         x = F.relu(self.conv1(x))
 
         # Size changes from (18, 32, 32) to (18, 16, 16)
-        x = self.pool(x)
+        # x = self.pool(x)
 
         # Reshape data to input to the input layer of the neural net
         # Size changes from (18, 16, 16) to (1, 4608)
         # Recall that the -1 infers this dimension from the other given dimension
-        x = x.view(-1, self.hidden_channels * 3 * 3)
+        x = x.view(-1, self.hidden_channels * self.input_size * self.input_size)
 
         # Computes the activation of the first fully connected layer
         # Size changes from (1, 4608) to (1, 64)

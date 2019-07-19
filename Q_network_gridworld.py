@@ -108,11 +108,13 @@ def find_last_checkpoint(fn, folder):
             files.append(file)
 
     episodes = [int(file.split("=")[-1][:-3]) for file in files]
-    last_episode = max(episodes)
+    if episodes:
+        last_episode = max(episodes)
 
-    last_checkpoint = '{}/{}_ep={}.pt'.format(folder, fn, str(last_episode))
+        last_checkpoint = '{}/{}_ep={}.pt'.format(folder, fn, str(last_episode))
 
-    return last_checkpoint, last_episode
+        return last_checkpoint, last_episode
+    return False, False
 
 
 class trainer_Q_network(object):
@@ -147,7 +149,7 @@ class trainer_Q_network(object):
         self.rewards = []
         self.steps = 0
         self.loss = 0
-        self.experiment_name = 'checkpoint_{}_DH={}_DS={}_em={}'.format(self.network.__class__.__name__, dynamic_holes, dynamic_start, self.embedding)
+        self.experiment_name = 'checkpoint_{}_DH={}_DS={}_em={}_new'.format(self.network.__class__.__name__, dynamic_holes, dynamic_start, self.embedding)
         self.exp_folder = 'checkpoints'
         self.fig_folder = 'figures'
         self.smooth_factor = 100
@@ -157,8 +159,9 @@ class trainer_Q_network(object):
 
         if load_episode:
             last_checkpoint, episode = find_last_checkpoint(self.experiment_name, self.exp_folder)
-            self.episode_number = episode
-            self.load_model(last_checkpoint)
+            if last_checkpoint:
+                self.episode_number = episode
+                self.load_model(last_checkpoint)
         # if not plotting:
         #     self.run_episodes()
         # else:
@@ -318,8 +321,6 @@ def google_experiment(network, dynamic_holes, number_of_epochs):
 
 
 if __name__ == "__main__":
-
-
     # dynamic_holes_poss = [True, False]
     # dynamic_start_poss = [True, False]
     # network_poss = [QNetwork, SimpleCNN]
@@ -328,9 +329,9 @@ if __name__ == "__main__":
     #
     # Parallel(n_jobs=4)(delayed(run_Q_learner) (network, False, size, i) for network in network_poss for size in gridworld_sizes for i in range(number_of_experiments))
     # trainer_Q_network(network=SimpleCNN, dynamic_holes=True, dynamic_start=False)
-    # google_experiment(SimpleCNN, True, 10)
-    dynamic_holes_poss = [True, False]
-    network_poss = [DQN, SimpleCNN]
+    # google_experiment(SimpleCNN, True, 1000000)
+    # dynamic_holes_poss = [True, False]
+    network_poss = [SimpleCNN, DQN]
     # network_poss = [SimpleCNN]
     Parallel(n_jobs=4)(
         delayed(google_experiment) (network, True, 1000000) for network in network_poss)
