@@ -323,16 +323,16 @@ def google_experiment(network, dynamic_holes, number_of_epochs):
 if __name__ == "__main__":
     # dynamic_holes_poss = [True, False]
     # dynamic_start_poss = [True, False]
-    # network_poss = [QNetwork, SimpleCNN]
-    # gridworld_sizes = [x for x in range(3,33)]
-    # number_of_experiments = 10
-    #
-    # Parallel(n_jobs=4)(delayed(run_Q_learner) (network, False, size, i) for network in network_poss for size in gridworld_sizes for i in range(number_of_experiments))
+    network_poss = [SimpleCNN, DQN]
+    gridworld_sizes = [x for x in range(3,33)]
+    number_of_experiments = 10
+
+    Parallel(n_jobs=4)(delayed(run_Q_learner) (network, False, size, i) for network in network_poss for size in gridworld_sizes for i in range(number_of_experiments))
     # trainer_Q_network(network=SimpleCNN, dynamic_holes=True, dynamic_start=False)
     # google_experiment(SimpleCNN, True, 1000000)
     # dynamic_holes_poss = [True, False]
-    network_poss = [SimpleCNN, DQN]
-    # network_poss = [SimpleCNN]
-    Parallel(n_jobs=4)(
-        delayed(google_experiment) (network, True, 1000000) for network in network_poss)
+    # network_poss = [SimpleCNN, DQN]
+    # # network_poss = [SimpleCNN]
+    # Parallel(n_jobs=4)(
+    #     delayed(google_experiment) (network, True, 1000000) for network in network_poss)
 

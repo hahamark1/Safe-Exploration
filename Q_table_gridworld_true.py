@@ -36,7 +36,7 @@ class EmphaticQLearner():
 
 
     def train(self):
-        for i in range(10000):
+        for i in range(1000000):
             self.step += 1
             if self.epsilon > 0.1:
                 self.epsilon = self.epsilon * 0.999999
