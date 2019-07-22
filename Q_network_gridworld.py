@@ -19,7 +19,7 @@ def tqdm(*args, **kwargs):
     return _tqdm(*args, **kwargs, mininterval=1)  # Safety, do not overflow buffer
 
 
-assert sys.version_info[:3] >= (3, 6, 0), "Make sure you have Python 3.6 installed!"
+# assert sys.version_info[:3] >= (3, 6, 0), "Make sure you have Python 3.6 installed!"
 
 # if gpu is to be used
 # device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
