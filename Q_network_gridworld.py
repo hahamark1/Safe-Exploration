@@ -352,7 +352,7 @@ def table_experiment():
     gridworld_sizes = [x for x in range(3, 33)]
     number_of_experiments = 10
 
-    Parallel(n_jobs=1)(
+    Parallel(n_jobs=24)(
         delayed(run_Q_learner)(network, True, size, i) for network in network_poss for size in gridworld_sizes for i in
         range(number_of_experiments))
 
