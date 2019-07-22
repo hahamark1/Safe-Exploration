@@ -6,6 +6,7 @@ import time
 import matplotlib.pyplot as plt
 import gym
 from gym import spaces
+from scipy.spatial import distance
 import math
 from gym.utils import seeding
 
@@ -39,6 +40,7 @@ class GridworldGym(gym.Env):
         self.observation_space = spaces.Box(low=-10000000, high=100000000, dtype=np.float, shape=(7, 7, 2))
 
         self.hole_pos = False
+        self.optimal_choices = {}
         self.reset()
 
     def reset(self):
@@ -57,7 +59,7 @@ class GridworldGym(gym.Env):
 
         taken_spots.append(self.agent_position)
         if not self.dynamic_end:
-            self.end_position = END_POS
+            self.end_position = [self.gridworld_size-1,self.gridworld_size-1]
         else:
             self.end_position = self.agent_position
             while self.end_position in taken_spots:
@@ -71,7 +73,7 @@ class GridworldGym(gym.Env):
             if not self.hole_pos or self.change:
                 self.hole_pos = []
                 for i in range(1, self.gridworld_size-1):
-                    position = [i, random.randint(0,6)]
+                    position = [i, random.randint(0,self.gridworld_size-1)]
                     taken_spots.append(position)
                     self.hole_pos.append(position)
         self.steps = 0
@@ -104,6 +106,60 @@ class GridworldGym(gym.Env):
             plt.draw()
             plt.pause(0.1)
 
+    def hole_distances(self, new_position):
+        distance = 0
+        for hole in self.hole_pos:
+            hole_dist = self.get_distance(new_position, hole)
+            if hole_dist > 0:
+                distance += len(self.hole_pos)/self.get_distance(new_position, hole)
+            else:
+                distance += 100
+        return len(self.hole_pos)*distance
+
+
+    def get_distance(self, a, b):
+        return (abs(a[0] - b[0]) + abs(a[1] - b[1]))
+
+    def optimal_choice(self):
+        obs = self.get_observation()
+        goal_dist = {}
+        if obs.tobytes() not in self.optimal_choices:
+            for move in MOVES:
+                new_agent_pos = self.do_move(self.agent_position, MOVES.index(move))
+                end_dist = self.get_distance(new_agent_pos, self.end_position)
+                hole_dist = self.hole_distances(new_agent_pos)
+                goal_dist[move] = end_dist + hole_dist
+
+            optimal_action = np.argmin(np.array([goal_dist[key] for key in goal_dist.keys()]))
+
+            self.optimal_choices[obs.tobytes()] = optimal_action
+        else:
+            optimal_action = self.optimal_choices[obs.tobytes()]
+        return optimal_action
+
+
+    def do_move(self, agent_pos, action_num):
+        # move agent
+        if action_num == 0:
+            agent_pos = [(agent_pos[0] + 1), agent_pos[1]]
+        elif action_num == 1:
+            agent_pos = [(agent_pos[0] - 1), agent_pos[1]]
+        elif action_num == 2:
+            agent_pos = [agent_pos[0], (agent_pos[1] + 1)]
+        elif action_num == 3:
+            agent_pos = [agent_pos[0], (agent_pos[1] - 1)]
+
+        if agent_pos[0] >= self.gridworld_size:
+            agent_pos[0] = self.gridworld_size-1
+        elif agent_pos[0] < 0:
+            agent_pos[0] = 0
+        if agent_pos[1] >= self.gridworld_size:
+            agent_pos[1] = self.gridworld_size-1
+        elif agent_pos[1] < 0:
+            agent_pos[1] = 0
+        return agent_pos
+
+
     def step(self, action_num):
 
         #increase counter
@@ -126,11 +182,11 @@ class GridworldGym(gym.Env):
 
 
             if self.agent_position[0] >= self.gridworld_size:
-                self.agent_position[0] = 6
+                self.agent_position[0] = self.gridworld_size-1
             elif self.agent_position[0] < 0:
                 self.agent_position[0] = 0
             if self.agent_position[1] >= self.gridworld_size:
-                self.agent_position[1] = 6
+                self.agent_position[1] = self.gridworld_size-1
             elif self.agent_position[1] < 0:
                 self.agent_position[1] = 0
 

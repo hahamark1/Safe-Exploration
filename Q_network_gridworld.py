@@ -122,7 +122,8 @@ class trainer_Q_network(object):
                  memory_size=MEMORY_SIZE, seed=SEED, discount_factor=DISCOUNT_FACTOR,
                  headless=True, learning_rate=LEARNING_RATE, batch_size=BATCH_SIZE,
                  dynamic_holes=DYNAMIC_HOLES, dynamic_start=DYNAMIC_START, load_episode=False, save_every=SAVE_EVERY,
-                 plot_every=PLOT_EVERY, plotting=False, embedding=EMBEDDING, gridworld_size=7, change=False):
+                 plot_every=PLOT_EVERY, plotting=False, embedding=EMBEDDING, gridworld_size=7, change=False,
+                 supervision=False, google=False, print_every=PRINT_EVERY):
 
         self.num_episodes = num_episodes
         self.memory = ReplayMemory(memory_size)
@@ -130,26 +131,30 @@ class trainer_Q_network(object):
 
 
         if embedding and network.__class__.__name__ != 'SimpleCNN':
-            self.env = GridworldGym(headless=headless, dynamic_holes=dynamic_holes, dynamic_start=dynamic_start, embedding=embedding, constant_change=change)
-            self.network = network(embedding=embedding).to(device)
+            self.env = GridworldGym(headless=headless, dynamic_holes=dynamic_holes, dynamic_start=dynamic_start, embedding=embedding, constant_change=change,
+                                    gridworld_size=gridworld_size)
+            self.network = network(embedding=embedding, gw_size=gridworld_size).to(device)
         else :
-            self.env = GridworldGym(headless=headless, dynamic_holes=dynamic_holes, dynamic_start=dynamic_start,constant_change=change)
-            self.network = network().to(device)
+            self.env = GridworldGym(headless=headless, dynamic_holes=dynamic_holes, dynamic_start=dynamic_start,constant_change=change, gridworld_size=gridworld_size)
+            self.network = network(gw_size=gridworld_size).to(device)
         self.initialize(seed)
         self.batch_size = batch_size
         self.save_every = save_every
         self.plot_every = plot_every
+        self.print_every = print_every
         self.embedding = embedding
-        self.optimizer = optim.Adam(self.network.parameters(), learning_rate)
+        self.gridworld_size = gridworld_size
+        self.supervision = supervision
+        self.optimizer = optim.Adam(self.network.parameters(), learning_rate, weight_decay=0.01)
         self.episode_number = 0
         self.num_deaths = 0
         self.episode_durations = []
         self.number_of_deaths = []
-        self.google = True
+        self.google = google
         self.rewards = []
         self.steps = 0
         self.loss = 0
-        self.experiment_name = 'checkpoint_{}_DH={}_DS={}_em={}_new'.format(self.network.__class__.__name__, dynamic_holes, dynamic_start, self.embedding)
+        self.experiment_name = 'checkpoint_{}_DH={}_DS={}_em={}_new_sup={}_size={}'.format(self.network.__class__.__name__, dynamic_holes, dynamic_start, self.embedding, supervision, self.gridworld_size)
         self.exp_folder = 'checkpoints'
         self.fig_folder = 'figures'
         self.smooth_factor = 100
@@ -183,10 +188,14 @@ class trainer_Q_network(object):
         transitions = self.memory.sample(self.batch_size)
 
         # transition is a list of 4-tuples, instead we want 4 vectors (as torch.Tensor's)
-        state, action, reward, next_state, done = zip(*transitions)
-
+        if not self.supervision:
+            state, action, reward, next_state, done = zip(*transitions)
+        else:
+            state, action, opt_action, reward, next_state, done = zip(*transitions)
+            opt_action = torch.tensor(opt_action, dtype=torch.int64).to(device)
         # convert to PyTorch and define types
         state = torch.tensor(state, dtype=torch.float).to(device)
+
         action = torch.tensor(action, dtype=torch.int64).to(device)  # Need 64 bit to use them as index
 
         next_state = torch.tensor(next_state, dtype=torch.float).to(device)
@@ -200,7 +209,15 @@ class trainer_Q_network(object):
             target = compute_target(self.network, reward, next_state, done, self.discount_factor)
 
         # loss is measured from error between current and newly expected Q values
-        loss = F.smooth_l1_loss(q_val, target)
+        if self.supervision:
+            loss = F.smooth_l1_loss(q_val, target, reduction='none')
+
+            super_loss = F.cross_entropy(opt_action, action)
+
+            loss += super_loss.float()
+            torch.mean(loss)
+        else:
+            loss = F.smooth_l1_loss(q_val, target)
 
         # backpropagation of loss to Neural Network (PyTorch magic)
         self.optimizer.zero_grad()
@@ -210,10 +227,11 @@ class trainer_Q_network(object):
         return loss.item()
 
     def run_episodes(self):
-         # Count the steps (do not reset at episode start, to compute epsilon)
+        # Count the steps (do not reset at episode start, to compute epsilon)
+        episode_duration = 0
 
         while self.episode_number < self.num_episodes:
-            if self.episode_number % PRINT_EVERY == 0:
+            if self.episode_number % self.print_every == 0:
                 print('Currently working on episode {}'.format(self.episode_number))
             done = False
             episode_duration = 0
@@ -226,11 +244,16 @@ class trainer_Q_network(object):
                 episode_duration += 1
                 self.steps += 1
                 a = select_action(self.network, s, epsilon)
+                if self.supervision:
+                    opt_a = self.env.optimal_choice()
                 s_next, r, done, _ = self.env.step(a)
                 rew += r
 
                 # Push a transition
-                self.memory.push((s, a, r, s_next, done))
+                if not self.supervision:
+                    self.memory.push((s, a, r, s_next, done))
+                else:
+                    self.memory.push((s, a, opt_a, r, s_next, done))
                 s = s_next
                 self.loss = self.train()
 
@@ -304,7 +327,7 @@ class trainer_Q_network(object):
             pickle.dump(data, pf)
 
 def run_Q_learner(network, dynamic_holes, gridworld_size, i):
-    Trainer = trainer_Q_network(network=network, dynamic_holes=dynamic_holes, gridworld_size=gridworld_size)
+    Trainer = trainer_Q_network(network=network, dynamic_holes=dynamic_holes, gridworld_size=gridworld_size, load_episode=True)
     Trainer.run_episodes()
 
     fn = 'big_chart_pickles/{}_{}_{}.pt'.format(gridworld_size, network.__class__.__name__, datetime.datetime.now().timestamp())
@@ -316,23 +339,33 @@ def run_Q_learner(network, dynamic_holes, gridworld_size, i):
 
 
 def google_experiment(network, dynamic_holes, number_of_epochs):
-    Trainer = trainer_Q_network(network=network, dynamic_holes=dynamic_holes, num_episodes=number_of_epochs, save_every=5000, plot_every=5000, change=True, load_episode=True)
+    Trainer = trainer_Q_network(network=network, dynamic_holes=dynamic_holes, num_episodes=number_of_epochs,print_every=50, save_every=5000, plot_every=5000, change=True, load_episode=True)
     Trainer.run_episodes()
 
+def supervised_experiment(network, dynamic_holes, number_of_epochs):
+    Trainer = trainer_Q_network(network=network, dynamic_holes=dynamic_holes, print_every=1000,
+                                save_every=500, plot_every=500, change=True, supervision=True, num_episodes=number_of_epochs)
+    Trainer.run_episodes()
 
-if __name__ == "__main__":
-    # dynamic_holes_poss = [True, False]
-    # dynamic_start_poss = [True, False]
+def table_experiment():
     network_poss = [SimpleCNN, DQN]
-    gridworld_sizes = [x for x in range(3,33)]
+    gridworld_sizes = [x for x in range(3, 33)]
     number_of_experiments = 10
 
-    Parallel(n_jobs=24)(delayed(run_Q_learner) (network, False, size, i) for network in network_poss for size in gridworld_sizes for i in range(number_of_experiments))
-    # trainer_Q_network(network=SimpleCNN, dynamic_holes=True, dynamic_start=False)
-    # google_experiment(SimpleCNN, True, 1000000)
-    # dynamic_holes_poss = [True, False]
-    # network_poss = [SimpleCNN, DQN]
-    # # network_poss = [SimpleCNN]
-    # Parallel(n_jobs=4)(
-    #     delayed(google_experiment) (network, True, 1000000) for network in network_poss)
+    Parallel(n_jobs=1)(
+        delayed(run_Q_learner)(network, True, size, i) for network in network_poss for size in gridworld_sizes for i in
+        range(number_of_experiments))
+
+def demonstration_experiment():
+    network_poss = [SimpleCNN, QNetwork]
+    Parallel(n_jobs=2)(
+        delayed(supervised_experiment)(network, True, 1000000) for network in network_poss)
+
+if __name__ == "__main__":
+
+    table_experiment()
+
+    # demonstration_experiment()
+
+
 

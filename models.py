@@ -25,7 +25,7 @@ device = torch.device("cpu")
 
 class DQN(nn.Module):
 
-    def __init__(self, h=7, w=7, outputs=4, embedding=False):
+    def __init__(self, gw_size=7, outputs=4, embedding=False):
         super(DQN, self).__init__()
         self.embeddings_size = EMBEDDING_SIZE
         if embedding:
@@ -40,8 +40,8 @@ class DQN(nn.Module):
         # and therefore the input image size, so compute it.
         def conv2d_size_out(size, kernel_size = 3, stride = 2):
             return (size - (kernel_size - 1) - 1) // stride  + 1
-        convw = conv2d_size_out(conv2d_size_out(w))
-        convh = conv2d_size_out(conv2d_size_out(h))
+        convw = conv2d_size_out(conv2d_size_out(gw_size))
+        convh = conv2d_size_out(conv2d_size_out(gw_size))
         linear_input_size = convw * convh * 16
         self.head = nn.Linear(linear_input_size, outputs)
 
@@ -59,9 +59,9 @@ class SimpleCNN(torch.nn.Module):
 
     # Our batch shape for input x is (3, 32, 32)
 
-    def __init__(self, embedding=False):
+    def __init__(self, embedding=False, gw_size=7):
         super(SimpleCNN, self).__init__()
-        self.input_size = 7
+        self.input_size = gw_size
         self.hidden_channels = 3
         self.hidden_fc = 16
         self.output_size = 4
@@ -107,9 +107,9 @@ class SimpleCNN(torch.nn.Module):
 
 class QNetwork(nn.Module):
 
-    def __init__(self, num_hidden=128):
+    def __init__(self, num_hidden=512, gw_size=7):
         nn.Module.__init__(self)
-        self.l1 = nn.Linear(49, num_hidden).type(torch.FloatTensor)
+        self.l1 = nn.Linear(gw_size**2, num_hidden).type(torch.FloatTensor)
         self.l2 = nn.Linear(num_hidden, num_actions)
         self.tanh = nn.Tanh()
 
@@ -122,9 +122,9 @@ class QNetwork(nn.Module):
 
 class QNetwork_deeper(nn.Module):
 
-    def __init__(self, num_hidden=[64, 128, 64]):
+    def __init__(self, num_hidden=[128, 256, 512], gw_size=7):
         nn.Module.__init__(self)
-        self.l1 = nn.Linear(49, num_hidden[0]).type(torch.FloatTensor)
+        self.l1 = nn.Linear(gw_size**2, num_hidden[0]).type(torch.FloatTensor)
         self.l2 = nn.Linear(num_hidden[0], num_hidden[1]).type(torch.FloatTensor)
         self.l3 = nn.Linear(num_hidden[1], num_hidden[2]).type(torch.FloatTensor)
         self.l4 = nn.Linear(num_hidden[2], num_actions)
