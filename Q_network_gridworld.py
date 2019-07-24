@@ -337,7 +337,7 @@ class trainer_Q_network(object):
             pickle.dump(data, pf)
 
 def run_Q_learner(network, dynamic_holes, gridworld_size, i):
-    Trainer = trainer_Q_network(network=network, dynamic_holes=dynamic_holes, gridworld_size=gridworld_size, load_episode=True, name=i, num_episodes=100000)
+    Trainer = trainer_Q_network(network=network, dynamic_holes=dynamic_holes, gridworld_size=gridworld_size, load_episode=True, name=i, num_episodes=10000)
     Trainer.run_episodes()
 
     fn = 'big_chart_pickles/{}_{}_{}.pt'.format(gridworld_size, Trainer.network.__class__.__name__, datetime.datetime.now().timestamp())
@@ -363,7 +363,7 @@ def table_experiment():
     number_of_experiments = 5
 
     Parallel(n_jobs=24)(
-        delayed(run_Q_learner)(network, True, size, i) for network in network_poss for size in gridworld_sizes for i in
+        delayed(run_Q_learner)(network, False, size, i) for network in network_poss for size in gridworld_sizes for i in
         range(number_of_experiments))
 
 def demonstration_experiment():
