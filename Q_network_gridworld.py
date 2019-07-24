@@ -129,7 +129,7 @@ class trainer_Q_network(object):
                  headless=True, learning_rate=LEARNING_RATE, batch_size=BATCH_SIZE,
                  dynamic_holes=DYNAMIC_HOLES, dynamic_start=DYNAMIC_START, load_episode=False, save_every=SAVE_EVERY,
                  plot_every=PLOT_EVERY, plotting=False, embedding=EMBEDDING, gridworld_size=7, change=False,
-                 supervision=False, google=False, print_every=PRINT_EVERY):
+                 supervision=False, google=False, print_every=PRINT_EVERY, name=None):
 
         self.num_episodes = num_episodes
         self.memory = ReplayMemory(memory_size)
@@ -160,7 +160,7 @@ class trainer_Q_network(object):
         self.rewards = []
         self.steps = 0
         self.loss = 0
-        self.experiment_name = 'checkpoint_{}_DH={}_DS={}_em={}_new_sup={}_size={}'.format(self.network.__class__.__name__, dynamic_holes, dynamic_start, self.embedding, supervision, self.gridworld_size)
+        self.experiment_name = 'checkpoint_{}_DH={}_DS={}_em={}_new_sup={}_size={}_i={}'.format(self.network.__class__.__name__, dynamic_holes, dynamic_start, self.embedding, supervision, self.gridworld_size, name)
         self.exp_folder = 'checkpoints'
         self.fig_folder = 'figures'
         self.smooth_factor = 100
@@ -337,7 +337,7 @@ class trainer_Q_network(object):
             pickle.dump(data, pf)
 
 def run_Q_learner(network, dynamic_holes, gridworld_size, i):
-    Trainer = trainer_Q_network(network=network, dynamic_holes=dynamic_holes, gridworld_size=gridworld_size, load_episode=True)
+    Trainer = trainer_Q_network(network=network, dynamic_holes=dynamic_holes, gridworld_size=gridworld_size, load_episode=True, name=i, num_episodes=100000)
     Trainer.run_episodes()
 
     fn = 'big_chart_pickles/{}_{}_{}.pt'.format(gridworld_size, Trainer.network.__class__.__name__, datetime.datetime.now().timestamp())
@@ -360,7 +360,7 @@ def supervised_experiment(network, dynamic_holes, number_of_epochs):
 def table_experiment():
     network_poss = [SimpleCNN, DQN]
     gridworld_sizes = [x for x in range(11, 33)]
-    number_of_experiments = 10
+    number_of_experiments = 5
 
     Parallel(n_jobs=24)(
         delayed(run_Q_learner)(network, True, size, i) for network in network_poss for size in gridworld_sizes for i in
