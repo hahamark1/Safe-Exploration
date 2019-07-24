@@ -359,7 +359,7 @@ def supervised_experiment(network, dynamic_holes, number_of_epochs):
 
 def table_experiment():
     network_poss = [SimpleCNN, DQN]
-    gridworld_sizes = [x for x in range(11, 33)]
+    gridworld_sizes = [x for x in range(3, 33)]
     number_of_experiments = 5
 
     Parallel(n_jobs=24)(
