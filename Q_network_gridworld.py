@@ -160,7 +160,7 @@ class trainer_Q_network(object):
         self.rewards = []
         self.steps = 0
         self.loss = 0
-        self.experiment_name = 'checkpoint_{}_DH={}_DS={}_em={}_new_sup={}_size={}_i={}'.format(self.network.__class__.__name__, dynamic_holes, dynamic_start, self.embedding, supervision, self.gridworld_size, name)
+        self.experiment_name = 'checkpoint_{}_DH={}_DS={}_em={}_new_sup={}_size={}_i={}'.format(self.network.__class__.__name__, change, dynamic_start, self.embedding, supervision, self.gridworld_size, name)
         self.exp_folder = 'checkpoints'
         self.fig_folder = 'figures'
         self.smooth_factor = 100
@@ -345,11 +345,11 @@ def run_Q_learner(network, dynamic_holes, gridworld_size, i):
     with open(fn, "wb") as pf:
         pickle.dump((Trainer.rewards, gridworld_size, Trainer.network.__class__.__name__, Trainer.episode_durations), pf)
 
-    'Finished a Q learner for {} of size {}, this is number {}'.format(network.__class__.__name__, gridworld_size, i)
+    'Finished a Q learner for {} of size {}, this is number {}'.format(Trainer.network.__class__.__name__, gridworld_size, i)
 
 
 def google_experiment(network, dynamic_holes, number_of_epochs):
-    Trainer = trainer_Q_network(network=network, dynamic_holes=dynamic_holes, num_episodes=number_of_epochs,print_every=50, save_every=5000, plot_every=5000, change=True, load_episode=True)
+    Trainer = trainer_Q_network(network=network, dynamic_holes=dynamic_holes, num_episodes=number_of_epochs,print_every=50, save_every=5000, plot_every=5000, change=False, load_episode=True)
     Trainer.run_episodes()
 
 def supervised_experiment(network, dynamic_holes, number_of_epochs):
@@ -363,12 +363,12 @@ def table_experiment():
     number_of_experiments = 5
 
     Parallel(n_jobs=24)(
-        delayed(run_Q_learner)(network, False, size, i) for network in network_poss for size in gridworld_sizes for i in
+        delayed(run_Q_learner)(network, True, size, i) for network in network_poss for size in gridworld_sizes for i in
         range(number_of_experiments))
 
 def demonstration_experiment():
     network_poss = [SimpleCNN, QNetwork]
-    Parallel(n_jobs=2)(
+    Parallel(n_jobs=24)(
         delayed(supervised_experiment)(network, True, 100000) for network in network_poss)
 
 if __name__ == "__main__":
