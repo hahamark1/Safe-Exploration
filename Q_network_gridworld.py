@@ -26,6 +26,7 @@ def tqdm(*args, **kwargs):
 
 device = torch.device("cpu")
 
+EPSILON_STEPS = 10000
 
 class ReplayMemory:
 
@@ -50,8 +51,8 @@ class ReplayMemory:
 
 
 def get_epsilon(it):
-    if it < 1000:
-        return (1 - 0.95*(it/1000))
+    if it < EPSILON_STEPS:
+        return (1 - 0.95*(it/EPSILON_STEPS))
     else:
         return 0.05
 
@@ -69,6 +70,11 @@ def select_action(model, state, epsilon):
 
     return index
 
+def select_best_action(model, state):
+    out = model(state)
+    # _, index = out.max(-1)
+    # index = int(index.item())
+    return out
 
 def compute_q_val(model, state, action):
     # YOUR CODE HERE
@@ -210,12 +216,16 @@ class trainer_Q_network(object):
 
         # loss is measured from error between current and newly expected Q values
         if self.supervision:
-            loss = F.smooth_l1_loss(q_val, target, reduction='none')
 
-            super_loss = F.cross_entropy(opt_action, action)
+            action_probs = self.network(state)
+            loss = F.smooth_l1_loss(q_val, target)
+            #
+            # one_hot = F.one_hot(opt_action).type(torch.FloatTensor)
+            super_loss = F.cross_entropy(action_probs, opt_action)
 
-            loss += super_loss.float()
-            torch.mean(loss)
+            loss += super_loss
+            # torch.mean(loss)
+            loss2 = F.smooth_l1_loss(q_val, target)
         else:
             loss = F.smooth_l1_loss(q_val, target)
 
@@ -330,10 +340,10 @@ def run_Q_learner(network, dynamic_holes, gridworld_size, i):
     Trainer = trainer_Q_network(network=network, dynamic_holes=dynamic_holes, gridworld_size=gridworld_size, load_episode=True)
     Trainer.run_episodes()
 
-    fn = 'big_chart_pickles/{}_{}_{}.pt'.format(gridworld_size, network.__class__.__name__, datetime.datetime.now().timestamp())
+    fn = 'big_chart_pickles/{}_{}_{}.pt'.format(gridworld_size, Trainer.network.__class__.__name__, datetime.datetime.now().timestamp())
 
     with open(fn, "wb") as pf:
-        pickle.dump((Trainer.rewards, gridworld_size, network.__class__.__name__, Trainer.episode_durations), pf)
+        pickle.dump((Trainer.rewards, gridworld_size, Trainer.network.__class__.__name__, Trainer.episode_durations), pf)
 
     'Finished a Q learner for {} of size {}, this is number {}'.format(network.__class__.__name__, gridworld_size, i)
 
@@ -349,7 +359,7 @@ def supervised_experiment(network, dynamic_holes, number_of_epochs):
 
 def table_experiment():
     network_poss = [SimpleCNN, DQN]
-    gridworld_sizes = [x for x in range(3, 33)]
+    gridworld_sizes = [x for x in range(11, 33)]
     number_of_experiments = 10
 
     Parallel(n_jobs=24)(
@@ -359,11 +369,12 @@ def table_experiment():
 def demonstration_experiment():
     network_poss = [SimpleCNN, QNetwork]
     Parallel(n_jobs=2)(
-        delayed(supervised_experiment)(network, True, 1000000) for network in network_poss)
+        delayed(supervised_experiment)(network, True, 100000) for network in network_poss)
 
 if __name__ == "__main__":
 
     table_experiment()
+    # supervised_experiment(SimpleCNN, True, 100)
 
     # demonstration_experiment()
 

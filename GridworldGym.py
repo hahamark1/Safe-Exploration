@@ -104,7 +104,9 @@ class GridworldGym(gym.Env):
             plt.clf()
             plt.matshow(self.observation)
             plt.draw()
-            plt.pause(0.1)
+            plt.pause(100)
+
+
 
     def hole_distances(self, new_position):
         distance = 0
@@ -164,6 +166,7 @@ class GridworldGym(gym.Env):
 
         #increase counter
         self.steps += 1
+
 
         #update agents
         restart = (self.agent_position in self.hole_pos or self.agent_position == self.end_position)

@@ -1,5 +1,7 @@
+# print('I got here')
 from torch import nn
 import torch
+# print('I got here')
 import torch.nn.functional as F
 from torch import optim
 from constants_gridwolrd import *
@@ -20,8 +22,8 @@ class DQN_ff(nn.Module):
         return out.view(x.size(0), -1)
 
 # if gpu is to be used
-# device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-device = torch.device("cpu")
+device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+# device = torch.device("cpu")
 
 class DQN(nn.Module):
 
