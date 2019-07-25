@@ -14,6 +14,11 @@ from GridworldGym import GridworldGym
 
 env = GridworldGym(headless=True, dynamic_holes=False, dynamic_start=False, constant_change=False)
 
+def smooth(x, N):
+    x = np.array(x)
+    cumsum = np.cumsum(np.insert(x, 0, 0))
+    return (cumsum[N:] - cumsum[:-N]) / float(N)
+
 class EmphaticQLearner():
 
     def __init__(self, load_q_values=True, gridworld_size=7):
@@ -36,10 +41,10 @@ class EmphaticQLearner():
 
 
     def train(self):
-        for i in range(1000000):
+        while self.episodes < 10000:
             self.step += 1
             if self.epsilon > 0.1:
-                self.epsilon = self.epsilon * 0.999999
+                self.epsilon = self.epsilon * 0.9999
 
             self.Q_learning()
 
@@ -134,6 +139,7 @@ class EmphaticQLearner():
 
         state = tuple(env.agent_position)
         best_action, max_Q = self.get_best_action(state)
+        env.optimal_choice()
         if np.random.random() > self.epsilon:
             action = best_action
             next_state, reward, done, info = self.do_game_step(action)
@@ -167,14 +173,16 @@ class EmphaticQLearner():
 def run_Q_learner(gridworld_size):
     Trainer = EmphaticQLearner(load_q_values=False, gridworld_size=gridworld_size)
     Trainer.train()
+    # print(np.max(smooth(Trainer.rewards, 100)))
     Trainer.save_rewards()
 
 
 if __name__ == "__main__":
-    gridworld_sizes = [x for x in range(16, 33)]
-    # embeddings = [True, False]
+    # run_Q_learner(6)
+    gridworld_sizes = [x for x in range(3, 33)]
+    # # embeddings = [True, False]
     number_of_experiments = 10
-
+    #
     Parallel(n_jobs=4)(
         delayed(run_Q_learner)(size) for size in gridworld_sizes for i in
         range(number_of_experiments))
