@@ -358,11 +358,11 @@ def supervised_experiment(network, dynamic_holes, number_of_epochs):
     Trainer.run_episodes()
 
 def table_experiment():
-    network_poss = [SimpleCNN, DQN]
+    network_poss = [QNetwork]
     gridworld_sizes = [x for x in range(3, 33)]
     number_of_experiments = 5
 
-    Parallel(n_jobs=24)(
+    Parallel(n_jobs=23)(
         delayed(run_Q_learner)(network, True, size, i) for network in network_poss for size in gridworld_sizes for i in
         range(number_of_experiments))
 
@@ -372,6 +372,7 @@ def demonstration_experiment():
         delayed(supervised_experiment)(network, True, 100000) for network in network_poss)
 
 if __name__ == "__main__":
+    # run_Q_learner(DQN, True, 18, 11)
 
     table_experiment()
     # supervised_experiment(SimpleCNN, True, 100)

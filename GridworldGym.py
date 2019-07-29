@@ -13,6 +13,7 @@ from gym.utils import seeding
 MOVES = ['moveLeft', 'moveRight', 'moveUp', 'moveDown']
 PLOT = False
 GRIDWORLD_SIZE = 7
+
 MAX_STEPS = 400
 START_POS = [0,0]
 END_POS = [6,6]
@@ -20,9 +21,20 @@ HOLE_POS = [[2,1],[3,3],[4,5]]
 NUM_HOLES = 3
 EMBEDDING_SIZE = 4
 
+# Define some colors
+BLACK = (0, 0, 0)
+WHITE = (255, 255, 255)
+GREEN = (0, 255, 0)
+RED = (255, 0, 0)
+YELLOW = (250, 218, 94)
+BLUE = (0,191,255)
+WIDTH = 20
+HEIGHT = 20
+MARGIN = 5
+
 class GridworldGym(gym.Env):
 
-    def __init__(self, headless=True, dynamic_start=False, dynamic_holes=False, dynamic_end=False, embedding=False, gridworld_size=7, constant_change=False):
+    def __init__(self, headless=True, dynamic_start=False, dynamic_holes=False, dynamic_end=False, embedding=False, gridworld_size=6, self_play=False, specific_holes=False, constant_change=False):
         self.headless = headless
         self.dynamic_start = dynamic_start
         self.dynamic_end = dynamic_end
@@ -30,6 +42,8 @@ class GridworldGym(gym.Env):
         self.action_space = spaces.Discrete(4)
         self.gridworld_size = gridworld_size
         self.num_holes = gridworld_size - 2
+        self.self_play = self_play
+        self.specific_holes = specific_holes
 
         if not self.headless:
             self.fig = plt.figure()
@@ -41,7 +55,19 @@ class GridworldGym(gym.Env):
 
         self.hole_pos = False
         self.optimal_choices = {}
+        if self.self_play:
+            self.init()
         self.reset()
+
+    def init(self):
+        # Initialize pygame
+        pygame.init()
+
+        # Set the HEIGHT and WIDTH of the screen
+        WINDOW_SIZE = [255, 255]
+        self.screen = pygame.display.set_mode(WINDOW_SIZE)
+        self.screen.fill(BLACK)
+        self.clock = pygame.time.Clock()
 
     def reset(self):
 
@@ -69,11 +95,14 @@ class GridworldGym(gym.Env):
         if not self.dynamic_holes:
             self.hole_pos = HOLE_POS
 
+        elif self.specific_holes:
+            self.hole_pos = self.specific_holes
+
         else:
             if not self.hole_pos or self.change:
                 self.hole_pos = []
                 for i in range(1, self.gridworld_size-1):
-                    position = [i, random.randint(0,self.gridworld_size-1)]
+                    position = [random.randint(0,self.gridworld_size-1), i]
                     taken_spots.append(position)
                     self.hole_pos.append(position)
         self.steps = 0
@@ -89,22 +118,43 @@ class GridworldGym(gym.Env):
                 self.observation[hole[0], hole[1]] = -1
         else:
             self.observation = np.zeros((EMBEDDING_SIZE, self.gridworld_size, self.gridworld_size))
-            self.observation[3, self.end_position[0], self.end_position[1]] = 1
+            self.observation[3, self.end_position[0], self.end_position[1]] = 2
             self.observation[2, self.agent_position[0], self.agent_position[1]] = 1
             for hole in self.hole_pos:
                 self.observation[1, hole[0], hole[1]] = -1
 
         return self.observation
 
+
+
     def plot_env(self):
 
         self.observation = self.get_observation()
 
         if not self.headless and not self.embedding:
-            plt.clf()
-            plt.matshow(self.observation)
+            plt.matshow(self.observation, 1)
             plt.draw()
-            plt.pause(100)
+            plt.pause(0.1)
+            plt.clf()
+
+    def plot_pygame(self):
+        for row in range(self.gridworld_size):
+            for column in range(self.gridworld_size):
+                color = WHITE
+                if self.observation[row][column] == 2:
+                    color = BLUE
+                elif self.observation[row][column] == 1:
+                    color = GREEN
+                elif self.observation[row][column] == -1:
+                    color = RED
+                pygame.draw.rect(self.screen,
+                                 color,
+                                 [(MARGIN + WIDTH) * column + MARGIN,
+                                  (MARGIN + HEIGHT) * row + MARGIN,
+                                  WIDTH,
+                                  HEIGHT])
+        self.clock.tick(60)
+        pygame.display.flip()
 
 
 
@@ -196,6 +246,7 @@ class GridworldGym(gym.Env):
             if not self.headless:
                 self.plot_env()
 
+
         info = {}
 
         reward = 0
@@ -217,6 +268,10 @@ class GridworldGym(gym.Env):
         #         plt.pause(3.0)
 
         self.observation = self.get_observation()
+
+
+        if self.self_play:
+            self.plot_pygame()
 
         return self.observation, reward, restart, info
 
@@ -244,9 +299,10 @@ class GridworldGym(gym.Env):
 
 1
 if __name__ == "__main__":
-    env = GridworldGym(headless=False)
-
+    env = GridworldGym(headless=True, dynamic_holes=True, constant_change=True)
 
     while True:
         action = np.random.choice(range(4))
-        env.step(action)
+        observation, reward, restart, info = env.step(action)
+        if restart:
+            env.reset()
