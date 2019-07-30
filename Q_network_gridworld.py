@@ -65,7 +65,7 @@ def select_action(model, state, epsilon):
         state_tensor = torch.tensor(state).type(torch.FloatTensor).to(device)
         out = model(state_tensor)
         if random.uniform(0, 1) <= epsilon:
-            return random.choice([0, 1])
+            return random.choice(list(range(num_actions)))
         else:
             _, index = out.max(-1)
             index = int(index.item())
@@ -171,7 +171,7 @@ class trainer_Q_network(object):
         self.constant_change = change
         self.loss = 0
         self.mark = Mark
-        self.experiment_name = 'checkpoint_{}_DH={}_DS={}_em={}_new_sup={}_load_mem={}_size={}_i={}'.format(self.network.__class__.__name__, change, dynamic_start, self.embedding, supervision, load_memory, self.gridworld_size, name)
+        self.experiment_name = 'checkpoint_{}_DH={}_DS={}_em={}_final_sup={}_load_mem={}_size={}_i={}'.format(self.network.__class__.__name__, change, dynamic_start, self.embedding, supervision, load_memory, self.gridworld_size, name)
         self.exp_folder = 'checkpoints'
         self.fig_folder = 'figures'
         self.smooth_factor = 100
@@ -246,7 +246,7 @@ class trainer_Q_network(object):
         torch.manual_seed(seed)
         # self.env.seed(seed)
 
-    def train(self):
+    def train(self, epsilon):
         # DO NOT MODIFY THIS FUNCTION
 
         # don't learn without some decent experience
@@ -278,7 +278,7 @@ class trainer_Q_network(object):
             target = compute_target(self.network, reward, next_state, done, self.discount_factor)
 
         # loss is measured from error between current and newly expected Q values
-        if self.supervision:
+        if self.supervision and epsilon > 0.05:
 
             action_probs = self.network(state)
             loss = F.smooth_l1_loss(q_val, target)
@@ -306,7 +306,7 @@ class trainer_Q_network(object):
         while self.episode_number < self.num_episodes:
             if self.episode_number % self.print_every == 0:
                 print('Currently working on episode {}'.format(self.episode_number))
-            # print('Currently working on episode {}'.format(self.episode_number))
+            print('Currently working on episode {}'.format(self.episode_number))
             done = False
             episode_duration = 0
             self.episode_number += 1
@@ -329,7 +329,7 @@ class trainer_Q_network(object):
                 else:
                     self.memory.push((s, a, opt_a, r, s_next, done))
                 s = s_next
-                self.loss = self.train()
+                self.loss = self.train(epsilon)
 
             self.episode_durations.append(episode_duration)
             # print('The episode lasted {}'.format(episode_duration))
@@ -411,7 +411,7 @@ def run_Q_learner(network, dynamic_holes, gridworld_size, i, load_memory=False):
     fn = 'big_chart_pickles/{}_{}_{}.pt'.format(gridworld_size, Trainer.network.__class__.__name__, datetime.datetime.now().timestamp())
 
     with open(fn, "wb") as pf:
-        pickle.dump((Trainer.rewards, gridworld_size, Trainer.network.__class__.__name__, Trainer.episode_durations), pf)
+        pickle.dump((Trainer.rewards, gridworld_size, Trainer.network.__class__.__name__, Trainer.episode_durations, Trainer.number_of_deaths), pf)
 
     'Finished a Q learner for {} of size {}, this is number {}'.format(Trainer.network.__class__.__name__, gridworld_size, i)
 
@@ -432,7 +432,7 @@ def supervised_experiment(network, change, number_of_epochs, supervision, load_m
     except:
         pass
     with open(fn, "wb") as pf:
-        pickle.dump((Trainer.rewards, gw_size, Trainer.network.__class__.__name__, Trainer.episode_durations),
+        pickle.dump((Trainer.rewards, gw_size, Trainer.network.__class__.__name__, Trainer.episode_durations, Trainer.number_of_deaths),
                     pf)
 
     'Finished a Q learner for {} of size {}, this is number {}'.format(Trainer.network.__class__.__name__,
@@ -463,12 +463,12 @@ def demonstration_experiment():
         delayed(supervised_experiment)(x[0], x[1], x[2], x[3], x[4], x[5], x[6]) for x in experiments)
 
 if __name__ == "__main__":
-    # run_Q_learner(DQN, True, 7, 11, True)
+    run_Q_learner(DQN, True, 10, 12, False)
 
     # table_experiment()
     # supervised_experiment(SimpleCNN, True, 100)
 
-    demonstration_experiment()
+    # demonstration_experiment()
 
 
 
