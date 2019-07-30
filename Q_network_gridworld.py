@@ -28,7 +28,7 @@ def tqdm(*args, **kwargs):
 
 device = torch.device("cpu")
 
-EPSILON_STEPS = 5000
+EPSILON_STEPS = 50000
 
 class ReplayMemory:
 
@@ -152,7 +152,7 @@ class trainer_Q_network(object):
         else :
             self.env = GridworldGym(headless=headless, dynamic_holes=dynamic_holes, dynamic_start=dynamic_start,constant_change=change, gridworld_size=gridworld_size)
             self.network = network(gw_size=gridworld_size).to(device)
-        self.initialize(seed)
+        # self.initialize(seed)
         self.batch_size = batch_size
         self.save_every = save_every
         self.plot_every = plot_every
@@ -171,7 +171,7 @@ class trainer_Q_network(object):
         self.constant_change = change
         self.loss = 0
         self.mark = Mark
-        self.experiment_name = 'checkpoint_{}_DH={}_DS={}_em={}_new_sup={}_size={}_i={}'.format(self.network.__class__.__name__, change, dynamic_start, self.embedding, supervision, self.gridworld_size, name)
+        self.experiment_name = 'checkpoint_{}_DH={}_DS={}_em={}_new_sup={}_load_mem={}_size={}_i={}'.format(self.network.__class__.__name__, change, dynamic_start, self.embedding, supervision, load_memory, self.gridworld_size, name)
         self.exp_folder = 'checkpoints'
         self.fig_folder = 'figures'
         self.smooth_factor = 100
@@ -306,6 +306,7 @@ class trainer_Q_network(object):
         while self.episode_number < self.num_episodes:
             if self.episode_number % self.print_every == 0:
                 print('Currently working on episode {}'.format(self.episode_number))
+            # print('Currently working on episode {}'.format(self.episode_number))
             done = False
             episode_duration = 0
             self.episode_number += 1
@@ -331,6 +332,9 @@ class trainer_Q_network(object):
                 self.loss = self.train()
 
             self.episode_durations.append(episode_duration)
+            # print('The episode lasted {}'.format(episode_duration))
+            # print('Currently: Epsilon is {} after {} Episodes'.format(epsilon, self.episode_number))
+            # print('The outcome is {}'.format(r))
             self.rewards.append(r)
             if r == -1:
                 self.num_deaths += 1
@@ -369,6 +373,7 @@ class trainer_Q_network(object):
         self.loss = checkpoint['loss']
         self.num_deaths = checkpoint['number_deaths']
         self.episode_durations = checkpoint['episode_durations']
+        self.steps = sum(self.episode_durations)
         self.rewards = checkpoint['rewards']
         self.number_of_deaths = checkpoint['deaths']
 
@@ -400,7 +405,7 @@ class trainer_Q_network(object):
             pickle.dump(data, pf)
 
 def run_Q_learner(network, dynamic_holes, gridworld_size, i, load_memory=False):
-    Trainer = trainer_Q_network(network=network, dynamic_holes=dynamic_holes, gridworld_size=gridworld_size, load_episode=True,load_memory=load_memory, name=i, num_episodes=10000)
+    Trainer = trainer_Q_network(network=network, dynamic_holes=dynamic_holes,save_every=10, gridworld_size=gridworld_size, load_episode=True,load_memory=load_memory, name=i, num_episodes=10000)
     Trainer.run_episodes()
 
     fn = 'big_chart_pickles/{}_{}_{}.pt'.format(gridworld_size, Trainer.network.__class__.__name__, datetime.datetime.now().timestamp())
@@ -447,11 +452,11 @@ def table_experiment():
 def demonstration_experiment():
     network_poss = [SimpleCNN, QNetwork]
     number_of_experiments = 5
-    # load_memory = [True, False]
-    load_memory = [True]
+    load_memory = [True, False]
+    # load_memory = [True]
     supervision = [True, False]
-    # dynamic_holes = [True, False]
-    dynamic_holes = [False]
+    dynamic_holes = [True, False]
+    # dynamic_holes = [False]
     gridworld_sizes = [7, 15, 24]
     experiments = [[network, change, 20000, supervis, mem, i, gw_size] for network in network_poss for change in dynamic_holes for supervis in supervision for mem in load_memory for i in range(number_of_experiments) for gw_size in gridworld_sizes if (supervis or mem)]
     Parallel(n_jobs=23)(
