@@ -10,7 +10,7 @@ from scipy.spatial import distance
 import math
 from gym.utils import seeding
 
-MOVES = ['moveLeft', 'moveRight', 'moveUp', 'moveDown']
+MOVES = ['moveDown', 'moveUp', 'moveRight', 'moveLeft']
 PLOT = False
 GRIDWORLD_SIZE = 7
 
@@ -82,7 +82,7 @@ class GridworldGym(gym.Env):
                     self.agent_position = [random.randint(0,6), random.randint(0,6)]
             else:
                 self.agent_position = [random.randint(0, 6), random.randint(0, 6)]
-
+        self.old_pos = self.agent_position
         taken_spots.append(self.agent_position)
         if not self.dynamic_end:
             self.end_position = [self.gridworld_size-1,self.gridworld_size-1]
@@ -156,17 +156,23 @@ class GridworldGym(gym.Env):
         self.clock.tick(60)
         pygame.display.flip()
 
-
+    def argmin(self, d):
+            if not d: return None
+            min_val = min(d.values())
+            return [k for k in d if d[k] == min_val][0]
 
     def hole_distances(self, new_position):
         distance = 0
+        closest_hole = 100
         for hole in self.hole_pos:
             hole_dist = self.get_distance(new_position, hole)
+            if hole_dist < closest_hole:
+                closest_hole = hole_dist
             if hole_dist > 0:
                 distance += len(self.hole_pos)/self.get_distance(new_position, hole)
             else:
                 distance += 100
-        return len(self.hole_pos)*distance
+        return distance, closest_hole
 
 
     def get_distance(self, a, b):
@@ -177,12 +183,24 @@ class GridworldGym(gym.Env):
         goal_dist = {}
         if obs.tobytes() not in self.optimal_choices:
             for move in MOVES:
-                new_agent_pos = self.do_move(self.agent_position, MOVES.index(move))
-                end_dist = self.get_distance(new_agent_pos, self.end_position)
-                hole_dist = self.hole_distances(new_agent_pos)
-                goal_dist[move] = end_dist + hole_dist
+                new_agent_pos, res = self.do_move(self.agent_position, MOVES.index(move))
 
-            optimal_action = np.argmin(np.array([goal_dist[key] for key in goal_dist.keys()]))
+                # if not res:
+                end_dist = 2*self.get_distance(new_agent_pos, self.end_position)
+                if new_agent_pos == self.old_pos:
+                    end_dist += 10
+                hole_dist, close_dist = self.hole_distances(new_agent_pos)
+                if res:
+                    end_dist += 1000
+                if close_dist == 0:
+                    close_dist = 0.1
+
+                goal_dist[move] = end_dist + 4*(1/close_dist)
+            distance = np.array(list(goal_dist.values()))
+            mini = np.where(distance == distance.min())
+            optimal_action = random.choice(mini[0])
+
+             # = MOVES.index(min(goal_dist, key=goal_dist.get))
 
             self.optimal_choices[obs.tobytes()] = optimal_action
         else:
@@ -200,16 +218,20 @@ class GridworldGym(gym.Env):
             agent_pos = [agent_pos[0], (agent_pos[1] + 1)]
         elif action_num == 3:
             agent_pos = [agent_pos[0], (agent_pos[1] - 1)]
-
+        res = False
         if agent_pos[0] >= self.gridworld_size:
             agent_pos[0] = self.gridworld_size-1
+            res = True
         elif agent_pos[0] < 0:
             agent_pos[0] = 0
+            res = True
         if agent_pos[1] >= self.gridworld_size:
             agent_pos[1] = self.gridworld_size-1
+            res = True
         elif agent_pos[1] < 0:
             agent_pos[1] = 0
-        return agent_pos
+            res = True
+        return agent_pos, res
 
 
     def step(self, action_num):
@@ -220,7 +242,7 @@ class GridworldGym(gym.Env):
 
         #update agents
         restart = (self.agent_position in self.hole_pos or self.agent_position == self.end_position)
-
+        self.old_pos = self.agent_position
         if not restart:
 
             #move agent
@@ -294,10 +316,6 @@ class GridworldGym(gym.Env):
             elif action_num == 3:
                 next_positions.append([agent_position[0], (agent_position[1] - 1)])
 
-
-
-
-1
 if __name__ == "__main__":
     env = GridworldGym(headless=True, dynamic_holes=True, constant_change=True)
 

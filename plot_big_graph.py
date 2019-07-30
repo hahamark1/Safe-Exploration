@@ -55,6 +55,8 @@ def prepare_data(data):
             print(rewards.shape)
             print(network, gw_size)
             mean_rewards = np.mean(rewards, axis=0)
+            plt.plot(mean_rewards)
+            plt.show()
 
 
             mean_episode_durations = np.mean(episode_durations, axis=0)
@@ -62,7 +64,6 @@ def prepare_data(data):
             prepared_data[network][gw_size]['Reward'] = mean_rewards
             print(np.array(mean_rewards))
 
-            er
             prepared_data[network][gw_size]['Episode_durations'] = mean_episode_durations
             learn_curve[network][gw_size] = np.argmax(mean_rewards>0.8)
 

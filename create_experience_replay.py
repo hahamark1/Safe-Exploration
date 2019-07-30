@@ -77,6 +77,7 @@ with tf.Session() as sess:
             total_state = env.reset(levelname=LEVEL_NAME)
 
         action = get_input()
+
         next_total_state, reward, done, info = env.step(action)
 
         next_state = state_processor.process(sess, next_total_state, 1)

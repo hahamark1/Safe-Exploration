@@ -1,93 +1,114 @@
-from MarioGym import MarioGym, pygame
+from GridworldGym import GridworldGym
 import matplotlib.pyplot as plt
 import pygame
 pygame.init()
 import random
 import numpy as np
+import time
 import pickle
-from DQN_SE import StateProcessor
-import tensorflow as tf
-from collections import deque, namedtuple
+from joblib import Parallel, delayed
+from Q_network_gridworld import ReplayMemory
 
 from constants import *
 
 
 def get_input():
-    if pygame.key.get_focused():
-        pygame.event.pump()
-        events = pygame.key.get_pressed()
-        if events[pygame.K_UP]:
-            move = 2
-            if events[pygame.K_LEFT]:
-                move = 3
-            if events[pygame.K_RIGHT]:
-                move = 4
-        else:
-            if events[pygame.K_LEFT]:
-                move = 0
-            elif events[pygame.K_RIGHT]:
+    move = False
+    while not move:
+        if pygame.key.get_focused():
+            pygame.event.pump()
+            events = pygame.key.get_pressed()
+            if events[pygame.K_UP]:
                 move = 1
-            else:
+            elif events[pygame.K_DOWN]:
                 move = 5
-    else:
-        move = 5
+            elif events[pygame.K_LEFT]:
+                move = 3
+            elif events[pygame.K_RIGHT]:
+                move = 2
+    if move == 5:
+        move = 0
     return move
 
-def save_replay_memory(memory):
+memory_folder = 'memories'
 
-    file_name = '{}_{}.pt'.format(LEVEL_NAME, len(memory))
+
+def save_replay_memory(memory, gw_size, supervision, hole_pos=False, Mark=True):
+    if hole_pos:
+        file_name = '{}/{}_{}_gw={}_sup={}_Mark={}_hp={}.pt'.format(memory_folder, 'GW', len(memory), gw_size, supervision, Mark, hole_pos)
+    else:
+        file_name = '{}/{}_{}_gw={}_sup={}_Mark={}.pt'.format(memory_folder, 'GW', len(memory), gw_size, supervision, Mark)
     with open(file_name, 'wb') as pf:
         pickle.dump(memory, pf)
-
-tf.reset_default_graph()
-# Create a glboal step variable
-global_step = tf.Variable(0, name='global_step', trainable=False)
 
 
 # Transition = namedtuple("Transition", ["state", "action", "reward", "next_state", "done"])
 
-replay_memory = []
+replay_memory_size = 1000
 
-# State processor
-state_processor = StateProcessor()
-
-replay_memory_size = 100
-
-# Get the environment and extract the number of actions.
-env = MarioGym(HEADLESS, step_size=10, level_name=LEVEL_NAME, partial_observation=PARTIAL_OBSERVATION, distance_reward=DISTANCE_REWARD)
-
-done = False
-plt.ion()
+replay_memory = ReplayMemory(replay_memory_size)
 
 
-with tf.Session() as sess:
-    sess.run(tf.global_variables_initializer())
+def main(gridworld_size, supervision, specific_holes):
 
-    total_state = env.reset(levelname=LEVEL_NAME)
-    state = state_processor.process(sess, total_state, 1)
-    state = np.stack([state] * WINDOW_LENGTH, axis=0)
-    total_state = np.stack([state], axis=0)
 
-    map_length = env.level.levelLength
+    change = True if specific_holes else False
+    dynamic_holes = True
+    # holes = [[5,1],[1,2],[3,3],[2,4],[5,5]]
+    use_holes = False
+    # supervision = False
+    Mark = False
+
+    # Get the environment and extract the number of actions.
+    env = GridworldGym(dynamic_holes=dynamic_holes,constant_change=change, gridworld_size=gridworld_size, specific_holes=specific_holes, self_play=False)
+
+
+    done = False
+
+
+    s = env.reset()
 
     counter = 0
 
+    old_states = [0,0,s]
     while counter < replay_memory_size:
         if done:
-            total_state = env.reset(levelname=LEVEL_NAME)
+            s = env.reset()
 
-        action = get_input()
-        next_total_state, reward, done, info = env.step(action)
+        if Mark:
+            a = get_input()
+        else:
+            a = env.optimal_choice()
 
-        next_state = state_processor.process(sess, next_total_state, 1)
-        next_state = np.append(state[1:, :, :], np.expand_dims(next_state, 0), axis=0)
 
-        next_total_state = np.stack([next_state], axis=0)
+        s_next, r, done, _ = env.step(a)
 
-        replay_memory.append([total_state, action, reward, next_total_state, done])
+        old_states = [old_states[1], old_states[2], s_next]
+        if old_states[0] is old_states[2]:
+            done = True
+        if supervision:
+            opt_a = env.optimal_choice()
 
-        counter += 1
+        if not supervision:
+            replay_memory.push((s, a, r, s_next, done))
+        else:
+            replay_memory.push((s, a, opt_a, r, s_next, done))
+        if Mark:
+            time.sleep(0.3)
+        counter +=1
 
-        total_state = next_total_state
+    if change:
+        save_replay_memory(replay_memory, gridworld_size, supervision, hole_pos=specific_holes, Mark=Mark)
+    else:
+        save_replay_memory(replay_memory, gridworld_size, supervision, Mark=Mark)
 
-save_replay_memory(replay_memory)
+
+
+#
+gridworld_sizes = [7, 15, 24]
+supervision = [True, False]
+holes = [[[5,1],[1,2],[3,3],[2,4],[5,5]], False]
+
+Parallel(n_jobs=4)(
+    delayed(main)(gw, sup, hol) for gw in gridworld_sizes for sup in supervision for hol in holes)
+

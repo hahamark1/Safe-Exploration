@@ -1,7 +1,7 @@
 MOVES = ['moveLeft', 'moveRight', 'moveUp', 'moveDown']
 num_actions = len(MOVES)
 
-from models import *
+# from models import *
 from collections import namedtuple
 
 # NETWORK = QNetwork

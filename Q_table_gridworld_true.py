@@ -12,7 +12,7 @@ from datetime import datetime
 
 from GridworldGym import GridworldGym
 
-env = GridworldGym(headless=True, dynamic_holes=False, dynamic_start=False, constant_change=False)
+
 
 def smooth(x, N):
     x = np.array(x)
@@ -31,6 +31,7 @@ class EmphaticQLearner():
         self.selfishness = 0.5
         self.writer = tf.summary.FileWriter(f'logs/Q_Tab_Grid/{str(datetime.now())}')
         self.step = 0
+        self.env = GridworldGym(headless=True, dynamic_holes=True, dynamic_start=False, constant_change=False, gridworld_size=gridworld_size)
         self.episodes = 0
         self.episode_setps = 0
         self.episode_durations = []
@@ -102,15 +103,15 @@ class EmphaticQLearner():
 
     def do_game_step(self, move):
 
-        next_state, reward, done, info = env.step(move)
+        next_state, reward, done, info = self.env.step(move)
 
         if done:
-            env.reset()
+            self.env.reset()
             self.rewards[-1] += reward
             self.log_scalar('reward', self.rewards[-1], self.step)
             self.log_scalar('epsilon', self.epsilon, self.step)
             self.log_scalar('mean_q', np.mean(self.log_q_values[-1]), self.step)
-            self.log_histogram('q_values', np.array(self.log_q_values[-1]), self.step, 20)
+            # self.log_histogram('q_values', np.array(self.log_q_values[-1]), self.step, 20)
             self.rewards.append(0)
             self.log_q_values.append([])
 
@@ -137,9 +138,9 @@ class EmphaticQLearner():
 
     def Q_learning(self):
 
-        state = tuple(env.agent_position)
+        state = tuple(self.env.agent_position)
         best_action, max_Q = self.get_best_action(state)
-        env.optimal_choice()
+
         if np.random.random() > self.epsilon:
             action = best_action
             next_state, reward, done, info = self.do_game_step(action)
@@ -147,7 +148,7 @@ class EmphaticQLearner():
             action = random.choice(range(4))
             next_state, reward, done, info = self.do_game_step(action)
 
-        next_state = tuple(env.agent_position)
+        next_state = tuple(self.env.agent_position)
 
         _, new_Q = self.get_best_action(next_state)
         value =  (reward + self.future_discount * new_Q)

@@ -9,6 +9,8 @@ import datetime
 from tqdm import tqdm as _tqdm
 from GridworldGym import GridworldGym
 
+import ast
+from distutils.util import strtobool
 import random
 from constants_gridwolrd import *
 from models import *
@@ -26,7 +28,7 @@ def tqdm(*args, **kwargs):
 
 device = torch.device("cpu")
 
-EPSILON_STEPS = 10000
+EPSILON_STEPS = 5000
 
 class ReplayMemory:
 
@@ -129,12 +131,19 @@ class trainer_Q_network(object):
                  headless=True, learning_rate=LEARNING_RATE, batch_size=BATCH_SIZE,
                  dynamic_holes=DYNAMIC_HOLES, dynamic_start=DYNAMIC_START, load_episode=False, save_every=SAVE_EVERY,
                  plot_every=PLOT_EVERY, plotting=False, embedding=EMBEDDING, gridworld_size=7, change=False,
-                 supervision=False, google=False, print_every=PRINT_EVERY, name=None):
+                 supervision=False, google=False, print_every=PRINT_EVERY, name=None, load_memory=False, Mark=False):
 
         self.num_episodes = num_episodes
         self.memory = ReplayMemory(memory_size)
+        self.memory_size = memory_size
         self.discount_factor = discount_factor
+        self.Mark = Mark
 
+        self.headless = headless
+        self.dynamic_holes = dynamic_holes
+        self.dynamic_start = dynamic_start
+        self.net_name = network
+        self.memory_folder = 'memories'
 
         if embedding and network.__class__.__name__ != 'SimpleCNN':
             self.env = GridworldGym(headless=headless, dynamic_holes=dynamic_holes, dynamic_start=dynamic_start, embedding=embedding, constant_change=change,
@@ -159,11 +168,15 @@ class trainer_Q_network(object):
         self.google = google
         self.rewards = []
         self.steps = 0
+        self.constant_change = change
         self.loss = 0
+        self.mark = Mark
         self.experiment_name = 'checkpoint_{}_DH={}_DS={}_em={}_new_sup={}_size={}_i={}'.format(self.network.__class__.__name__, change, dynamic_start, self.embedding, supervision, self.gridworld_size, name)
         self.exp_folder = 'checkpoints'
         self.fig_folder = 'figures'
         self.smooth_factor = 100
+        if load_memory:
+            self.load_replay_memory()
 
         if self.embedding and not check_conv_net(self.network):
             raise ValueError('We cannot combine embeddings with a Feed-Forward network!')
@@ -177,6 +190,56 @@ class trainer_Q_network(object):
         #     self.run_episodes()
         # else:
         #     self.plot_results()
+
+    def load_replay_memory(self):
+        files = []
+        for file in os.listdir('./{}'.format(self.memory_folder)):
+            if file.endswith('.pt') and file.startswith('GW'):
+                splitted = file.split('_')
+                gw = int(splitted[2][3:])
+                sup = strtobool(splitted[3][4:])
+                mem_len = int(splitted[1])
+
+
+                if 'hp' in file:
+                    mark = strtobool(splitted[4][5:])
+                    hole_positions = ast.literal_eval(splitted[5][3:-3])
+                else:
+                    hole_positions = False
+                    mark = strtobool(splitted[4][5:-3])
+                if gw == self.gridworld_size:
+                    if sup == self.supervision:
+                        if mark == self.Mark:
+                            if not self.constant_change and hole_positions:
+                                files.append([file, hole_positions, mem_len])
+                            elif self.constant_change and not hole_positions:
+                                files.append([file, hole_positions, mem_len])
+
+        if len(files) == 0:
+            raise ValueError('No such memory available!')
+        outcome = max(files, key=lambda x: x[2])
+        self.hole_positions = outcome[1]
+
+        if not self.constant_change:
+            if self.embedding and self.network.__class__.__name__ != 'SimpleCNN':
+                self.env = GridworldGym(headless=self.headless, dynamic_holes=self.dynamic_holes, dynamic_start=self.dynamic_start, embedding=self.embedding, specific_holes=outcome[1], constant_change=self.constant_change,
+                                        gridworld_size=self.gridworld_size)
+                self.network = self.net_name(embedding=self.embedding, gw_size=self.self.gridworld_size).to(device)
+            else:
+                self.env = GridworldGym(headless=self.headless, dynamic_holes=self.dynamic_holes, dynamic_start=self.dynamic_start,constant_change=self.constant_change, specific_holes=outcome[1], gridworld_size=self.gridworld_size)
+                self.network = self.net_name(gw_size=self.gridworld_size).to(device)
+
+
+        with open('{}/{}'.format(self.memory_folder, outcome[0]), 'rb') as pf:
+            memory = pickle.load(pf)
+
+        if len(memory) < self.memory_size:
+            factor = int(self.memory_size / outcome[2])
+            rm = factor * memory.memory
+
+        for mem in rm:
+            self.memory.push(mem)
+        return
 
     def initialize(self, seed):
         random.seed(seed)
@@ -336,8 +399,8 @@ class trainer_Q_network(object):
         with open(fn, "wb") as pf:
             pickle.dump(data, pf)
 
-def run_Q_learner(network, dynamic_holes, gridworld_size, i):
-    Trainer = trainer_Q_network(network=network, dynamic_holes=dynamic_holes, gridworld_size=gridworld_size, load_episode=True, name=i, num_episodes=10000)
+def run_Q_learner(network, dynamic_holes, gridworld_size, i, load_memory=False):
+    Trainer = trainer_Q_network(network=network, dynamic_holes=dynamic_holes, gridworld_size=gridworld_size, load_episode=True,load_memory=load_memory, name=i, num_episodes=10000)
     Trainer.run_episodes()
 
     fn = 'big_chart_pickles/{}_{}_{}.pt'.format(gridworld_size, Trainer.network.__class__.__name__, datetime.datetime.now().timestamp())
@@ -352,10 +415,23 @@ def google_experiment(network, dynamic_holes, number_of_epochs):
     Trainer = trainer_Q_network(network=network, dynamic_holes=dynamic_holes, num_episodes=number_of_epochs,print_every=50, save_every=5000, plot_every=5000, change=False, load_episode=True)
     Trainer.run_episodes()
 
-def supervised_experiment(network, dynamic_holes, number_of_epochs):
-    Trainer = trainer_Q_network(network=network, dynamic_holes=dynamic_holes, print_every=1000,
-                                save_every=500, plot_every=500, change=True, supervision=True, num_episodes=number_of_epochs)
+def supervised_experiment(network, change, number_of_epochs, supervision, load_memory, i, gw_size):
+    Trainer = trainer_Q_network(network=network, dynamic_holes=True, print_every=1000, gridworld_size=gw_size,
+                                save_every=500, plot_every=500, change=change, supervision=supervision, num_episodes=number_of_epochs, load_memory=load_memory, name=i)
     Trainer.run_episodes()
+
+    fn = 'supervised_pickles/{}_{}_sup={}_lm={}_dh={}_{}.pt'.format(gw_size, Trainer.network.__class__.__name__, supervision, load_memory, change,
+                                                datetime.datetime.now().timestamp())
+    try:
+        os.mkdir('supervised_pickles')
+    except:
+        pass
+    with open(fn, "wb") as pf:
+        pickle.dump((Trainer.rewards, gw_size, Trainer.network.__class__.__name__, Trainer.episode_durations),
+                    pf)
+
+    'Finished a Q learner for {} of size {}, this is number {}'.format(Trainer.network.__class__.__name__,
+                                                                       gw_size, i)
 
 def table_experiment():
     network_poss = [QNetwork]
@@ -366,18 +442,28 @@ def table_experiment():
         delayed(run_Q_learner)(network, True, size, i) for network in network_poss for size in gridworld_sizes for i in
         range(number_of_experiments))
 
+
+
 def demonstration_experiment():
     network_poss = [SimpleCNN, QNetwork]
-    Parallel(n_jobs=24)(
-        delayed(supervised_experiment)(network, True, 100000) for network in network_poss)
+    number_of_experiments = 5
+    # load_memory = [True, False]
+    load_memory = [True]
+    supervision = [True, False]
+    # dynamic_holes = [True, False]
+    dynamic_holes = [False]
+    gridworld_sizes = [7, 15, 24]
+    experiments = [[network, change, 20000, supervis, mem, i, gw_size] for network in network_poss for change in dynamic_holes for supervis in supervision for mem in load_memory for i in range(number_of_experiments) for gw_size in gridworld_sizes if (supervis or mem)]
+    Parallel(n_jobs=4)(
+        delayed(supervised_experiment)(x[0], x[1], x[2], x[3], x[4], x[5], x[6]) for x in experiments)
 
 if __name__ == "__main__":
-    # run_Q_learner(DQN, True, 18, 11)
+    # run_Q_learner(DQN, True, 7, 11, True)
 
-    table_experiment()
+    # table_experiment()
     # supervised_experiment(SimpleCNN, True, 100)
 
-    # demonstration_experiment()
+    demonstration_experiment()
 
 
 
