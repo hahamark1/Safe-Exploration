@@ -463,12 +463,12 @@ def demonstration_experiment():
         delayed(supervised_experiment)(x[0], x[1], x[2], x[3], x[4], x[5], x[6]) for x in experiments)
 
 if __name__ == "__main__":
-    run_Q_learner(DQN, True, 10, 12, False)
+    # run_Q_learner(DQN, True, 10, 12, False)
 
     # table_experiment()
     # supervised_experiment(SimpleCNN, True, 100)
 
-    # demonstration_experiment()
+    demonstration_experiment()
 
 
 
