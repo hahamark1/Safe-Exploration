@@ -151,7 +151,7 @@ class trainer_Q_network(object):
                                     gridworld_size=gridworld_size)
             self.network = network(embedding=embedding, gw_size=gridworld_size).to(device)
         else :
-            self.env = GridworldGym(headless=headless, dynamic_holes=dynamic_holes, dynamic_start=dynamic_start,constant_change=change, gridworld_size=gridworld_size, self_play=True)
+            self.env = GridworldGym(headless=headless, dynamic_holes=dynamic_holes, dynamic_start=dynamic_start,constant_change=change, gridworld_size=gridworld_size, self_play=False)
             self.network = network(gw_size=gridworld_size).to(device)
         # self.initialize(seed)
         self.batch_size = batch_size
@@ -230,7 +230,7 @@ class trainer_Q_network(object):
                                         gridworld_size=self.gridworld_size)
                 self.network = self.net_name(embedding=self.embedding, gw_size=self.self.gridworld_size).to(device)
             else:
-                self.env = GridworldGym(headless=self.headless, dynamic_holes=self.dynamic_holes, dynamic_start=self.dynamic_start,constant_change=self.constant_change, specific_holes=outcome[1], gridworld_size=self.gridworld_size, self_play=True)
+                self.env = GridworldGym(headless=self.headless, dynamic_holes=self.dynamic_holes, dynamic_start=self.dynamic_start,constant_change=self.constant_change, specific_holes=outcome[1], gridworld_size=self.gridworld_size)
                 self.network = self.net_name(gw_size=self.gridworld_size).to(device)
 
 
