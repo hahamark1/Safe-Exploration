@@ -167,12 +167,13 @@ class trainer_Q_network(object):
         self.episode_durations = []
         self.number_of_deaths = []
         self.google = google
+        self.load_memory = load_memory
         self.rewards = []
         self.steps = 0
         self.constant_change = change
         self.loss = 0
         self.mark = Mark
-        self.experiment_name = 'checkpoint_{}_DH={}_DS={}_em={}_final_sup={}_load_mem={}_size={}_i={}'.format(self.network.__class__.__name__, change, dynamic_start, self.embedding, supervision, load_memory, self.gridworld_size, name)
+        self.experiment_name = 'checkpoint_{}_DH={}_DS={}_em={}_final2_sup={}_load_mem={}_size={}_i={}'.format(self.network.__class__.__name__, change, dynamic_start, self.embedding, supervision, load_memory, self.gridworld_size, name)
         self.exp_folder = 'checkpoints'
         self.fig_folder = 'figures'
         self.smooth_factor = 100
@@ -469,13 +470,11 @@ def dynamic_experiment():
 
 def demonstration_experiment():
     network_poss = [SimpleCNN, QNetwork]
-    number_of_experiments = 5
+    number_of_experiments = 4
     load_memory = [True, False]
-    # load_memory = [True]
     supervision = [True, False]
     dynamic_holes = [True, False]
-    # dynamic_holes = [False]
-    gridworld_sizes = [3, 7, 15, 24]
+    gridworld_sizes = [3, 7, 15]
     experiments = [[network, change, 10000, supervis, mem, i, gw_size] for network in network_poss for change in dynamic_holes for supervis in supervision for mem in load_memory for i in range(number_of_experiments) for gw_size in gridworld_sizes if xor(supervis, mem)]
     Parallel(n_jobs=1)(
         delayed(supervised_experiment)(x[0], x[1], x[2], x[3], x[4], x[5], x[6]) for x in experiments)

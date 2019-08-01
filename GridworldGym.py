@@ -278,8 +278,6 @@ class GridworldGym(gym.Env):
             reward += 1
             restart = True
             info['succeed'] = 1
-            print(self.get_observation())
-            print('Agent position is {}, end goal is {}'.format(self.agent_position, self.end_position))
         elif self.agent_position in self.hole_pos:
             reward -= 1
             info['death'] = 1
