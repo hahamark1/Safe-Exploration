@@ -306,7 +306,7 @@ class trainer_Q_network(object):
             loss += super_loss
             # torch.mean(loss)
         else:
-        loss = F.smooth_l1_loss(q_val, target)
+            loss = F.smooth_l1_loss(q_val, target)
 
         # backpropagation of loss to Neural Network (PyTorch magic)
         self.optimizer.zero_grad()
