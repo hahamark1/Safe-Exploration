@@ -4,6 +4,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 import sys
 import pickle
+from operator import xor
 import datetime
 
 from tqdm import tqdm as _tqdm
@@ -281,14 +282,23 @@ class trainer_Q_network(object):
         if self.supervision and epsilon > 0.05:
 
             action_probs = self.network(state)
+
+            l = torch.ones(action_probs.shape)
+
+            l[np.arange(len(l)), opt_action] = 0
+
             loss = F.smooth_l1_loss(q_val, target)
             #
             # one_hot = F.one_hot(opt_action).type(torch.FloatTensor)
-            super_loss = F.cross_entropy(action_probs, opt_action)
+            # super_loss = F.cross_entropy(action_probs, opt_action)
+            Q = action_probs + l
+            action_e = action_probs[np.arange(len(action_probs)), opt_action]
+            super_loss = torch.sum(torch.max(Q) - action_e)
+
+
 
             loss += super_loss
             # torch.mean(loss)
-            loss2 = F.smooth_l1_loss(q_val, target)
         else:
             loss = F.smooth_l1_loss(q_val, target)
 
@@ -449,7 +459,7 @@ def table_experiment():
 
 def dynamic_experiment():
     network_poss = [SimpleCNN, QNetwork]
-    gridworld_sizes = [7, 15, 24]
+    gridworld_sizes = [3, 7, 15, 24]
     number_of_experiments = 5
 
     Parallel(n_jobs=23)(
@@ -465,9 +475,9 @@ def demonstration_experiment():
     supervision = [True, False]
     dynamic_holes = [True, False]
     # dynamic_holes = [False]
-    gridworld_sizes = [7, 15, 24]
-    experiments = [[network, change, 20000, supervis, mem, i, gw_size] for network in network_poss for change in dynamic_holes for supervis in supervision for mem in load_memory for i in range(number_of_experiments) for gw_size in gridworld_sizes if (supervis or mem)]
-    Parallel(n_jobs=23)(
+    gridworld_sizes = [3, 7, 15, 24]
+    experiments = [[network, change, 10000, supervis, mem, i, gw_size] for network in network_poss for change in dynamic_holes for supervis in supervision for mem in load_memory for i in range(number_of_experiments) for gw_size in gridworld_sizes if xor(supervis, mem)]
+    Parallel(n_jobs=1)(
         delayed(supervised_experiment)(x[0], x[1], x[2], x[3], x[4], x[5], x[6]) for x in experiments)
 
 if __name__ == "__main__":
@@ -476,6 +486,6 @@ if __name__ == "__main__":
 
     # supervised_experiment(SimpleCNN, True, 100)
 
-    table_experiment()
-    # demonstration_experiment()
+    # table_experiment()
+    demonstration_experiment()
     # dynamic_experiment()

@@ -31,7 +31,7 @@ class EmphaticQLearner():
         self.selfishness = 0.5
         self.writer = tf.summary.FileWriter(f'logs/Q_Tab_Grid/{str(datetime.now())}')
         self.step = 0
-        self.env = GridworldGym(headless=True, dynamic_holes=True, dynamic_start=False, constant_change=False, gridworld_size=gridworld_size)
+        self.env = GridworldGym(headless=True, dynamic_holes=True, dynamic_start=False, constant_change=True, gridworld_size=gridworld_size)
         self.episodes = 0
         self.episode_setps = 0
         self.episode_durations = []
@@ -52,7 +52,7 @@ class EmphaticQLearner():
 
     def save_rewards(self):
 
-        fn = 'big_chart_pickles/{}_{}_{}.pt'.format(self.gridworld_size, 'Table',
+        fn = 'dynamic_pickles/{}_{}_{}.pt'.format(self.gridworld_size, 'Table',
                                                  datetime.now().timestamp())
 
         with open(fn, "wb") as pf:
@@ -176,14 +176,15 @@ def run_Q_learner(gridworld_size):
     Trainer.train()
     # print(np.max(smooth(Trainer.rewards, 100)))
     Trainer.save_rewards()
+    print(Trainer.total_succeed)
 
 
 if __name__ == "__main__":
     # run_Q_learner(6)
-    gridworld_sizes = [x for x in range(3, 33)]
+    gridworld_sizes = [x for x in [7]]
     # # embeddings = [True, False]
-    number_of_experiments = 10
+    number_of_experiments = 1
     #
-    Parallel(n_jobs=4)(
+    Parallel(n_jobs=1)(
         delayed(run_Q_learner)(size) for size in gridworld_sizes for i in
         range(number_of_experiments))

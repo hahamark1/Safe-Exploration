@@ -44,6 +44,7 @@ class GridworldGym(gym.Env):
         self.num_holes = gridworld_size - 2
         self.self_play = self_play
         self.specific_holes = specific_holes
+        self.max_steps = max(30, 2*self.gridworld_size)
 
         if not self.headless:
             self.fig = plt.figure()
@@ -277,12 +278,14 @@ class GridworldGym(gym.Env):
             reward += 1
             restart = True
             info['succeed'] = 1
+            print(self.get_observation())
+            print('Agent position is {}, end goal is {}'.format(self.agent_position, self.end_position))
         elif self.agent_position in self.hole_pos:
             reward -= 1
             info['death'] = 1
             restart = True
 
-        restart = restart or self.steps > MAX_STEPS
+        restart = restart or self.steps > self.max_steps
 
         # if restart:
         #     self.reset()
@@ -300,21 +303,6 @@ class GridworldGym(gym.Env):
     def render(self, mode='human', close=False):
         pass
 
-    def safest_action(self, observation):
-        next_positions = []
-        action_scores = np.zeros(self.action_space)
-
-
-
-        for action_num in range(self.action_space):
-            if action_num == 0:
-                next_positions.append([(agent_position[0] + 1) , agent_position[1]])
-            elif action_num == 1:
-                next_positions.append([(agent_position[0] - 1), agent_position[1]])
-            elif action_num == 2:
-                next_positions.append([agent_position[0], (agent_position[1] + 1)])
-            elif action_num == 3:
-                next_positions.append([agent_position[0], (agent_position[1] - 1)])
 
 if __name__ == "__main__":
     env = GridworldGym(headless=True, dynamic_holes=True, constant_change=True)
