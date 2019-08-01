@@ -306,7 +306,7 @@ class trainer_Q_network(object):
         while self.episode_number < self.num_episodes:
             if self.episode_number % self.print_every == 0:
                 print('Currently working on episode {}'.format(self.episode_number))
-            print('Currently working on episode {}'.format(self.episode_number))
+            # print('Currently working on episode {}'.format(self.episode_number))
             done = False
             episode_duration = 0
             self.episode_number += 1
@@ -404,8 +404,8 @@ class trainer_Q_network(object):
         with open(fn, "wb") as pf:
             pickle.dump(data, pf)
 
-def run_Q_learner(network, dynamic_holes, gridworld_size, i, load_memory=False):
-    Trainer = trainer_Q_network(network=network, dynamic_holes=dynamic_holes,save_every=10, gridworld_size=gridworld_size, load_episode=True,load_memory=load_memory, name=i, num_episodes=10000)
+def run_Q_learner(network, dynamic_holes, gridworld_size, i, load_memory=False, change=False):
+    Trainer = trainer_Q_network(network=network, dynamic_holes=dynamic_holes,save_every=1000, gridworld_size=gridworld_size, load_episode=True,load_memory=load_memory, name=i, num_episodes=10000, change=change)
     Trainer.run_episodes()
 
     fn = 'big_chart_pickles/{}_{}_{}.pt'.format(gridworld_size, Trainer.network.__class__.__name__, datetime.datetime.now().timestamp())
@@ -447,6 +447,14 @@ def table_experiment():
         delayed(run_Q_learner)(network, True, size, i) for network in network_poss for size in gridworld_sizes for i in
         range(number_of_experiments))
 
+def dynamic_experiment():
+    network_poss = [SimpleCNN, QNetwork]
+    gridworld_sizes = [7, 15, 24]
+    number_of_experiments = 5
+
+    Parallel(n_jobs=23)(
+        delayed(run_Q_learner)(network, True, size, i, change=True) for network in network_poss for size in gridworld_sizes for i in
+        range(number_of_experiments))
 
 
 def demonstration_experiment():
@@ -463,12 +471,11 @@ def demonstration_experiment():
         delayed(supervised_experiment)(x[0], x[1], x[2], x[3], x[4], x[5], x[6]) for x in experiments)
 
 if __name__ == "__main__":
-    # run_Q_learner(DQN, True, 10, 12, False)
+    # run_Q_learner(QNetwork, True, 7, 122, False)
 
-    # table_experiment()
+
     # supervised_experiment(SimpleCNN, True, 100)
 
-    demonstration_experiment()
-
-
-
+    table_experiment()
+    # demonstration_experiment()
+    # dynamic_experiment()
