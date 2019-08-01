@@ -34,7 +34,7 @@ MARGIN = 5
 
 class GridworldGym(gym.Env):
 
-    def __init__(self, headless=True, dynamic_start=False, dynamic_holes=False, dynamic_end=False, embedding=False, gridworld_size=6, self_play=False, specific_holes=False, constant_change=False):
+    def __init__(self, headless=True, dynamic_start=False, dynamic_holes=False, dynamic_end=False, embedding=False, gridworld_size=6, self_play=False, specific_holes=False, constant_change=False, max_steps=400):
         self.headless = headless
         self.dynamic_start = dynamic_start
         self.dynamic_end = dynamic_end
@@ -44,7 +44,7 @@ class GridworldGym(gym.Env):
         self.num_holes = gridworld_size - 2
         self.self_play = self_play
         self.specific_holes = specific_holes
-        self.max_steps = max(30, 2*self.gridworld_size)
+        self.max_steps = 400
 
         if not self.headless:
             self.fig = plt.figure()

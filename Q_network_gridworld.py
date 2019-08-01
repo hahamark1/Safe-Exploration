@@ -29,7 +29,7 @@ def tqdm(*args, **kwargs):
 
 device = torch.device("cpu")
 
-EPSILON_STEPS = 50000
+EPSILON_STEPS = 5000
 
 class ReplayMemory:
 
@@ -151,7 +151,7 @@ class trainer_Q_network(object):
                                     gridworld_size=gridworld_size)
             self.network = network(embedding=embedding, gw_size=gridworld_size).to(device)
         else :
-            self.env = GridworldGym(headless=headless, dynamic_holes=dynamic_holes, dynamic_start=dynamic_start,constant_change=change, gridworld_size=gridworld_size)
+            self.env = GridworldGym(headless=headless, dynamic_holes=dynamic_holes, dynamic_start=dynamic_start,constant_change=change, gridworld_size=gridworld_size, self_play=True)
             self.network = network(gw_size=gridworld_size).to(device)
         # self.initialize(seed)
         self.batch_size = batch_size
@@ -171,6 +171,7 @@ class trainer_Q_network(object):
         self.rewards = []
         self.steps = 0
         self.constant_change = change
+        self.supervision_episodes = 1000
         self.loss = 0
         self.mark = Mark
         self.experiment_name = 'checkpoint_{}_DH={}_DS={}_em={}_final2_sup={}_load_mem={}_size={}_i={}'.format(self.network.__class__.__name__, change, dynamic_start, self.embedding, supervision, load_memory, self.gridworld_size, name)
@@ -186,6 +187,7 @@ class trainer_Q_network(object):
         if load_episode:
             last_checkpoint, episode = find_last_checkpoint(self.experiment_name, self.exp_folder)
             if last_checkpoint:
+                print('Continue from episode {}'.format(self.episode_number))
                 self.episode_number = episode
                 self.load_model(last_checkpoint)
         # if not plotting:
@@ -228,7 +230,7 @@ class trainer_Q_network(object):
                                         gridworld_size=self.gridworld_size)
                 self.network = self.net_name(embedding=self.embedding, gw_size=self.self.gridworld_size).to(device)
             else:
-                self.env = GridworldGym(headless=self.headless, dynamic_holes=self.dynamic_holes, dynamic_start=self.dynamic_start,constant_change=self.constant_change, specific_holes=outcome[1], gridworld_size=self.gridworld_size)
+                self.env = GridworldGym(headless=self.headless, dynamic_holes=self.dynamic_holes, dynamic_start=self.dynamic_start,constant_change=self.constant_change, specific_holes=outcome[1], gridworld_size=self.gridworld_size, self_play=True)
                 self.network = self.net_name(gw_size=self.gridworld_size).to(device)
 
 
@@ -248,6 +250,7 @@ class trainer_Q_network(object):
         torch.manual_seed(seed)
         # self.env.seed(seed)
 
+
     def train(self, epsilon):
         # DO NOT MODIFY THIS FUNCTION
 
@@ -259,15 +262,17 @@ class trainer_Q_network(object):
         transitions = self.memory.sample(self.batch_size)
 
         # transition is a list of 4-tuples, instead we want 4 vectors (as torch.Tensor's)
-        if not self.supervision:
-            state, action, reward, next_state, done = zip(*transitions)
-        else:
+        if self.supervision:
             state, action, opt_action, reward, next_state, done = zip(*transitions)
             opt_action = torch.tensor(opt_action, dtype=torch.int64).to(device)
+        else:
+            state, action, reward, next_state, done = zip(*transitions)
+
+            # opt_action = torch.tensor(a, dtype=torch.int64).to(device)
         # convert to PyTorch and define types
         state = torch.tensor(state, dtype=torch.float).to(device)
 
-        action = torch.tensor(action, dtype=torch.int64).to(device)  # Need 64 bit to use them as index
+        action = torch.tensor(action, dtype=torch.int64).to(device)
 
         next_state = torch.tensor(next_state, dtype=torch.float).to(device)
         reward = torch.tensor(reward, dtype=torch.float).to(device)
@@ -280,8 +285,8 @@ class trainer_Q_network(object):
             target = compute_target(self.network, reward, next_state, done, self.discount_factor)
 
         # loss is measured from error between current and newly expected Q values
-        if self.supervision and epsilon > 0.05:
 
+        if self.supervision and self.episode_number < self.supervision_episodes:
             action_probs = self.network(state)
 
             l = torch.ones(action_probs.shape)
@@ -301,7 +306,7 @@ class trainer_Q_network(object):
             loss += super_loss
             # torch.mean(loss)
         else:
-            loss = F.smooth_l1_loss(q_val, target)
+        loss = F.smooth_l1_loss(q_val, target)
 
         # backpropagation of loss to Neural Network (PyTorch magic)
         self.optimizer.zero_grad()
@@ -309,6 +314,7 @@ class trainer_Q_network(object):
         self.optimizer.step()
 
         return loss.item()
+
 
     def run_episodes(self):
         # Count the steps (do not reset at episode start, to compute epsilon)
@@ -325,6 +331,7 @@ class trainer_Q_network(object):
             rew = 0
 
             while not done:
+
                 epsilon = get_epsilon(self.steps)
                 episode_duration += 1
                 self.steps += 1
@@ -416,7 +423,7 @@ class trainer_Q_network(object):
             pickle.dump(data, pf)
 
 def run_Q_learner(network, dynamic_holes, gridworld_size, i, load_memory=False, change=False):
-    Trainer = trainer_Q_network(network=network, dynamic_holes=dynamic_holes,save_every=1000, gridworld_size=gridworld_size, load_episode=True,load_memory=load_memory, name=i, num_episodes=10000, change=change)
+    Trainer = trainer_Q_network(network=network, dynamic_holes=dynamic_holes,save_every=1000, gridworld_size=gridworld_size, load_episode=False,load_memory=load_memory, name=i, num_episodes=10000, change=change)
     Trainer.run_episodes()
 
     fn = 'big_chart_pickles/{}_{}_{}.pt'.format(gridworld_size, Trainer.network.__class__.__name__, datetime.datetime.now().timestamp())
@@ -432,7 +439,7 @@ def google_experiment(network, dynamic_holes, number_of_epochs):
     Trainer.run_episodes()
 
 def supervised_experiment(network, change, number_of_epochs, supervision, load_memory, i, gw_size):
-    Trainer = trainer_Q_network(network=network, dynamic_holes=True, print_every=1000, gridworld_size=gw_size,
+    Trainer = trainer_Q_network(network=network, dynamic_holes=True, print_every=1000, gridworld_size=gw_size, load_episode=True,
                                 save_every=500, plot_every=500, change=change, supervision=supervision, num_episodes=number_of_epochs, load_memory=load_memory, name=i)
     Trainer.run_episodes()
 
@@ -451,7 +458,7 @@ def supervised_experiment(network, change, number_of_epochs, supervision, load_m
 
 def table_experiment():
     network_poss = [QNetwork]
-    gridworld_sizes = [x for x in range(3, 33)]
+    gridworld_sizes = [x for x in range(15, 33)]
     number_of_experiments = 5
 
     Parallel(n_jobs=23)(
@@ -476,7 +483,7 @@ def demonstration_experiment():
     dynamic_holes = [True, False]
     gridworld_sizes = [3, 7, 15]
     experiments = [[network, change, 10000, supervis, mem, i, gw_size] for network in network_poss for change in dynamic_holes for supervis in supervision for mem in load_memory for i in range(number_of_experiments) for gw_size in gridworld_sizes if xor(supervis, mem)]
-    Parallel(n_jobs=23)(
+    Parallel(n_jobs=63)(
         delayed(supervised_experiment)(x[0], x[1], x[2], x[3], x[4], x[5], x[6]) for x in experiments)
 
 if __name__ == "__main__":
