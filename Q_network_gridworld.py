@@ -482,7 +482,7 @@ def demonstration_experiment():
     supervision = [True, False]
     dynamic_holes = [True, False]
     gridworld_sizes = [3, 7, 15]
-    experiments = [[network, change, 10000, supervis, mem, i, gw_size] for network in network_poss for change in dynamic_holes for supervis in supervision for mem in load_memory for i in range(number_of_experiments) for gw_size in gridworld_sizes if xor(supervis, mem)]
+    experiments = [[network, change, 10000, supervis, mem, i, gw_size] for mem in load_memory for network in network_poss for change in dynamic_holes  for supervis in supervision  for i in range(number_of_experiments) for gw_size in gridworld_sizes if xor(supervis, mem)]
     Parallel(n_jobs=23)(
         delayed(supervised_experiment)(x[0], x[1], x[2], x[3], x[4], x[5], x[6]) for x in experiments)
 

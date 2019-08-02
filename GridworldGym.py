@@ -96,8 +96,8 @@ class GridworldGym(gym.Env):
         if not self.dynamic_holes:
             self.hole_pos = HOLE_POS
 
-        elif self.specific_holes:
-            self.hole_pos = self.specific_holes
+        # elif self.specific_holes:
+        #     self.hole_pos = self.specific_holes
 
         else:
             if not self.hole_pos or self.change:
