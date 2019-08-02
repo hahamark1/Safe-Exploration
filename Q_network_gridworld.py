@@ -493,5 +493,5 @@ if __name__ == "__main__":
     # supervised_experiment(SimpleCNN, True, 100)
 
     # table_experiment()
-    demonstration_experiment()
-    # dynamic_experiment()
+    # demonstration_experiment()
+    dynamic_experiment()
