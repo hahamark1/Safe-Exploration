@@ -61,7 +61,8 @@ def main(gridworld_size, supervision, specific_holes):
 
     # Get the environment and extract the number of actions.
     env = GridworldGym(dynamic_holes=dynamic_holes,constant_change=change, gridworld_size=gridworld_size, specific_holes=specific_holes, self_play=False)
-
+    if not change:
+        specific_holes = env.hole_pos
 
     done = False
 
@@ -97,7 +98,7 @@ def main(gridworld_size, supervision, specific_holes):
             time.sleep(0.3)
         counter +=1
 
-    if change:
+    if not change:
         save_replay_memory(replay_memory, gridworld_size, supervision, hole_pos=specific_holes, Mark=Mark)
     else:
         save_replay_memory(replay_memory, gridworld_size, supervision, Mark=Mark)
@@ -105,10 +106,9 @@ def main(gridworld_size, supervision, specific_holes):
 
 
 #
-gridworld_sizes = [7, 15, 24]
+gridworld_sizes = [3, 7, 15]
 supervision = [True, False]
-holes = [[[5,1],[1,2],[3,3],[2,4],[5,5]], False]
+holes = [True, False]
 
 Parallel(n_jobs=4)(
     delayed(main)(gw, sup, hol) for gw in gridworld_sizes for sup in supervision for hol in holes)
-
