@@ -458,7 +458,7 @@ def supervised_experiment(network, change, number_of_epochs, supervision, load_m
 
 def table_experiment():
     network_poss = [QNetwork]
-    gridworld_sizes = [x for x in range(15, 33)]
+    gridworld_sizes = [x for x in range(5, 33)]
     number_of_experiments = 5
 
     Parallel(n_jobs=23)(
