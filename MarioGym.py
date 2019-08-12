@@ -1,11 +1,11 @@
 import pygame
-import random
-import pickle
 import numpy as np
-import time
 from classes.Level import Level
 from classes.LevelHeadless import LevelHeadless
 from entities.Mario import Mario
+from entities.Coin import Coin
+from entities.CoinHeadless import CoinHeadless
+
 from entities.MarioHeadless import MarioHeadless
 from classes.Dashboard import Dashboard
 from classes.Sound import Sound
@@ -13,77 +13,131 @@ from classes.Menu import Menu
 import gym
 from gym import spaces
 import matplotlib.pyplot as plt
-from gym.utils import seeding
+from constants import *
+import random
 
-MOVES = ['moveLeft', 'moveRight', 'jump', 'jumpLeft', 'jumpRight', 'doNothing']
 
 
 class MarioGym(gym.Env):
 
-    def __init__(self, headless=True):
+    def __init__(self, headless=True, level_name='Level-basic-one-goomba.json', no_coins=5, step_size=5, partial_observation=False, distance_reward=False, experiment='SE'):
         self.action_space = spaces.Discrete(6)
         self.observation_space = spaces.Box(low=-10000000, high=100000000, dtype=np.float, shape=(40, 80, 4))
 
-        self.levelname = 'Level-basic-one-goomba.json'
+        self.levelname = level_name
         self.headless = headless
         self.score = 0
+        self.step_size = step_size
         self.max_frame_rate = 60
         self.steps = 0
         self.observation = None
+        self.experiment = experiment
         self.level = None
         self.mario = None
+        self.mario2 = None
         self.screen = None
         self.dashboard = None
         self.sound = None
         self.menu = None
+        self.partial_observation = partial_observation
+        self.no_coins = no_coins
+        self.coins_start = self.no_coins
+        self.distance_reward = distance_reward
 
         self.init_game()
-        self.reset()
+        self.reset(levelname = self.levelname)
+        self.coin_name = 'Coin' if not self.headless else 'CoinHeadless'
 
-    def reset(self):
+    def reset(self, levelname=None):
+        if not levelname:
+            self.no_coins = 5
+            self.levelname = 'Level-{}-coins.json'.format(self.no_coins)
+        else:
+            self.levelname = levelname
         self.init_game()
         self.steps = 0
-        self.observation = self.level_to_empathic_numpy()
+        self.observation = self.level_to_numpy()
+        self.max_dist = 0
         return self.observation
 
-    def step(self, action_num):
+    def reset_clean(self, y_pos):
+        self.count_entities()
+        self.coins_taken = self.coins_start - self.no_coins
+        self.coins_end = self.no_coins
+        self.no_coins = min(5, self.no_coins * 2)
+        self.coins_start = self.no_coins
+
+        self.levelname = 'Level-{}-coins.json'.format(self.no_coins)
+        self.init_game(y_position=y_pos, coins=self.coins_end, clock=self.clock)
+
+        self.observation = self.level_to_numpy()
+
+        return self.observation
+
+    def step(self, action_num, ):
         self.steps += 1
         action = MOVES[action_num]
+        # action = 'doNothing'
         num_goombas= len([x for x in self.level.entityList
                           if ((x.__class__.__name__ == 'Goomba'
                               or x.__class__.__name__ == 'GoombaHeadless')
                               and x.alive)])
 
+        coins = len([x for x in self.level.entityList
+                          if ((x.__class__.__name__ == self.coin_name))])
+
+        old_x_pos = self.mario.rect.x / (10 * MAP_MULTIPLIER)
+
         reward = self.do_game_step(action)
+
+        if self.distance_reward:
+            reward += old_x_pos/1.7
 
         goombas_died = num_goombas - len([x for x in self.level.entityList
                           if ((x.__class__.__name__ == 'Goomba'
                               or x.__class__.__name__ == 'GoombaHeadless')
                               and x.alive)])
-        self.observation = self.level_to_empathic_numpy()
 
-        info = {'num_killed': goombas_died}
+        coins_taken = coins - len([x for x in self.level.entityList if ((x.__class__.__name__ == self.coin_name))])
 
+        coins_left = len([x for x in self.level.entityList
+                          if ((x.__class__.__name__ == self.coin_name))])
 
-        restart = self.mario.restart or self.steps >= 500
+        self.observation = self.level_to_numpy()
+        # print(coins_taken)
+        info = {'num_killed': goombas_died,
+                'coins_taken': coins_taken,
+                'death': self.mario.restart}
 
+        if self.mario.restart:
+            reward -= HOLE_REWARD
+        if coins_left == 0 and coins_taken > 0:
+            self.mario.restart = True
+
+        restart = self.mario.restart or self.steps >= EPISODE_LENGTH
         return self.observation, reward, restart, info
 
     def render(self, mode='human', close=False):
         pass
 
-    def init_game(self):
+    def get_screen(self):
+
+        return self.screen
+
+    def init_game(self, y_position=0, coins=0, points=0, time=0, clock=0):
         if not self.headless:
             pygame.mixer.pre_init(44100, -16, 2, 4096)
             pygame.init()
             self.screen = pygame.display.set_mode((640, 480))
-            self.dashboard = Dashboard("./img/font.png", 8, self.screen)
+            self.dashboard = Dashboard("./img/font.png", 8, self.screen, coins=0, points=0, time=0)
             self.sound = Sound()
             self.level = Level(self.screen, self.sound, self.dashboard, self.levelname)
             self.menu = Menu(self.screen, self.dashboard, self.level, self.sound)
             self.menu.update()
 
-            self.mario = Mario(0, 0, self.level, self.screen, self.dashboard, self.sound)
+            self.mario = Mario(0, y_position/32, self.level, self.screen, self.dashboard, self.sound)
+            if self.experiment == 'FD':
+                self.mario2 = Mario(0, 2, self.level, self.screen, self.dashboard, self.sound)
             self.clock = pygame.time.Clock()
 
             self.menu.dashboard.state = "play"
@@ -93,8 +147,10 @@ class MarioGym(gym.Env):
             pygame.display.update()
         else:
             self.level = LevelHeadless(self.levelname)
+            if self.experiment == 'FD':
+                self.mario2 = MarioHeadless(0, 2, self.level)
             self.mario = MarioHeadless(0, 0, self.level)
-            self.clock = 0
+            self.clock = clock
 
     def do_game_step(self, move):
         if not self.headless:
@@ -103,13 +159,22 @@ class MarioGym(gym.Env):
             start_score = self.level.points
 
         counter = 0
-        while counter < 5:
+        reward = 0
+        while counter < self.step_size:
             counter += 1
+            coins = self.return_coins()
             self.do_move(move)
+
+            if self.experiment == 'FD':
+                random_move = random.choice(MOVES)
+                self.do_random_move(self.mario2, random_move)
+
             if not self.headless:
                 pygame.display.set_caption("{:.2f} FPS".format(self.clock.get_fps()))
                 self.level.drawLevel(self.mario.camera)
                 self.mario.update()
+                if self.experiment == 'FD':
+                    self.mario2.update()
                 self.clock.tick(self.max_frame_rate)
                 self.dashboard.update()
                 pygame.display.update()
@@ -117,51 +182,115 @@ class MarioGym(gym.Env):
             else:
                 self.level.updateEntities()
                 self.mario.update()
+                if self.experiment == 'FD':
+                    self.mario2.update()
                 self.clock += (1.0 / 60.0)
                 self.score = self.level.points
 
-            # if self.mario.restart:
-            #     deadbonus = -1000
+            reward += coins - self.return_coins()
 
-            # plt.matshow(self.observation[:,:,0], 1, cmap='gray')
-            # plt.draw()
-            # plt.pause(0.01)
-            # plt.clf()
+        return COIN_REWARD * reward
 
-            #reward = 0.001 * (self.score - start_score + deadbonus)
-            reward = 1
-
-        return reward
-
-    def level_to_numpy(self):
+    def level_to_numpy(self, other_agent=False):
+        mult = 1
         granularity = 8
 
         padding = int(256/granularity)
-
         level_size = self.level.levelLength*padding
-        array = np.zeros((level_size, level_size))
+        array = np.zeros((EMBEDDING_SIZE, level_size, level_size))
+        granx = int(level_size / MAP_HEIGHT)
+        grany = int(level_size / MAP_WIDTH)
 
-        array[int(round(self.mario.rect.y/granularity))][int(round(self.mario.rect.x/granularity))] = -1
-        # for i, row in enumerate(self.level.level):
-        #     for j, ele in enumerate(row):
-        #         if ele.rect:
-        #             array[i][j] = 5
+        if other_agent:
+            mult *+ -1
+
+        y_axis_1 = int(round(self.mario.rect.top/granularity))
+        y_axis_2 = int(round(self.mario.rect.bottom / granularity))
+        x_axis_1 = int(round(self.mario.rect.left/granularity))
+        x_axis_2 = int(round(self.mario.rect.right / granularity))
+
+        if other_agent:
+            array[EMBEDDINGS['Other_agents'], y_axis_1: y_axis_2, x_axis_1: x_axis_2] = 1
+        else:
+            array[EMBEDDINGS['Mario'], y_axis_1: y_axis_2, x_axis_1: x_axis_2] = 1
+
+        if self.experiment == 'FD':
+            y_axis_1 = int(round(self.mario2.rect.top / granularity))
+            y_axis_2 = int(round(self.mario2.rect.bottom / granularity))
+            x_axis_1 = int(round(self.mario2.rect.left / granularity))
+            x_axis_2 = int(round(self.mario2.rect.right / granularity))
+            if other_agent:
+                array[EMBEDDINGS['Mario'], y_axis_1: y_axis_2, x_axis_1: x_axis_2] = 1
+            else:
+                array[EMBEDDINGS['Other_agents'], y_axis_1: y_axis_2, x_axis_1: x_axis_2] = 1
+
+
+
         for entity in self.level.entityList:
+            y_axis_1 = int(round(entity.rect.top / granularity))
+            y_axis_2 = int(round(entity.rect.bottom / granularity))
+            x_axis_1 = int(round(entity.rect.left / granularity))
+            x_axis_2 = int(round(entity.rect.right / granularity))
             if entity.__class__.__name__ == 'Koopa' or entity.__class__.__name__ == 'Goomba' or entity.__class__.__name__ == 'GoombaHeadless':
-                    array[int(round(entity.rect.y / granularity))][int(round(entity.rect.x / granularity))] = 1
-            elif entity.__class__.__name__ == 'Coin':
-                array[int(round(entity.rect.y / granularity))][int(round(entity.rect.x / granularity))] = 2
+                array[EMBEDDINGS['Animal'], y_axis_1: y_axis_2, x_axis_1: x_axis_2] = 1
+            elif entity.__class__.__name__ == 'Coin' or entity.__class__.__name__ == 'CoinHeadless':
+                array[EMBEDDINGS['Coin'], y_axis_1: y_axis_2, x_axis_1: x_axis_2] = 1
             elif entity.__class__.__name__ == 'RandomBox':
                 if not entity.triggered:
-                    array[int(round(entity.rect.y / granularity))][int(round(entity.rect.x / granularity))] = 3
+                    array[EMBEDDINGS['Random_box'], y_axis_1: y_axis_2, x_axis_1: x_axis_2] = 1
                 else:
-                    array[int(round(entity.rect.y / granularity))][int(round(entity.rect.x / granularity))] = 4
-        for ground in self.level.groundList:
-            array[int(round(32*ground[1] / granularity))][int(round(32*ground[0] / granularity))] = 5
+                    array[EMBEDDINGS['Random_box_trig'], y_axis_1: y_axis_2, x_axis_1: x_axis_2] = 1
 
-        array = np.hstack((np.zeros((level_size, padding)), array))
-        array = np.vstack((np.zeros((padding, level_size+padding)), array))
-        return array[max(0, int(round(self.mario.rect.y / granularity))): max(0,int(round(self.mario.rect.y / granularity))) + 2*padding, int(round(self.mario.rect.x / granularity)):int(round(self.mario.rect.x / granularity)) + 2 * padding]
+        for layer in self.level.level:
+            for ground in layer:
+                if ground.rect:
+                    y_axis_1 = int(round(ground.rect.top / granularity))
+                    y_axis_2 = int(round(ground.rect.bottom / granularity))
+                    x_axis_1 = int(round(ground.rect.left / granularity))
+                    x_axis_2 = int(round(ground.rect.right / granularity))
+
+                    array[EMBEDDINGS['Ground'], y_axis_1: y_axis_2, x_axis_1: x_axis_2] = 1
+        for layer in self.level.level[13:17]:
+            for index in range(len(layer)):
+                if not layer[index].rect and layer[index-1].rect:
+                    y_axis_1 = int(round(layer[0].rect.top / granularity))
+                    y_axis_2 = int(round(layer[0].rect.bottom / granularity))
+                    x_axis_1 = int(round(layer[index-1].rect.right / granularity))
+                    width = layer[index-1].rect.right - layer[index-1].rect.left
+                    x_axis_2 = int(round((layer[index-1].rect.right + 2 * width) / granularity))
+
+                    array[EMBEDDINGS['Hole'], y_axis_1: y_axis_2, x_axis_1: x_axis_2] = 1
+
+        if self.partial_observation:
+            left_paddding = int(round(self.mario.rect.y / granularity))
+            upper_padding  = int(round(self.mario.rect.x / granularity))
+            x1 = max(0, int(round(self.mario.rect.y / granularity)) - min(left_paddding, padding))
+            x2 = max(0, int(round(self.mario.rect.y / granularity)) + (2 * padding - min(left_paddding, padding)))
+            x3 = int(round(self.mario.rect.x / granularity)) - min(upper_padding, padding)
+            x4 = int(round(self.mario.rect.x / granularity)) + (2 * padding - min(upper_padding, padding))
+
+            numpy_frame = array[:, x1: x2, x3: x4]
+        else:
+            numpy_frame = array[:,0:MAP_HEIGHT, 0:MAP_WIDTH]
+
+        return numpy_frame
+
+    def count_entities(self, entity='coin'):
+
+        if self.headless:
+            no_entity = len([entity for entity in self.level.entityList if isinstance(entity, CoinHeadless)])
+        else:
+            no_entity = len([entity for entity in self.level.entityList if isinstance(entity, Coin)])
+        self.no_coins = no_entity
+
+
+    def return_coins(self, entity='coin'):
+
+        if self.headless:
+            no_entity = len([entity for entity in self.level.entityList if isinstance(entity, CoinHeadless)])
+        else:
+            no_entity = len([entity for entity in self.level.entityList if isinstance(entity, Coin)])
+        return no_entity
 
     def level_to_empathic_numpy(self):
         granularity = 8
@@ -174,9 +303,7 @@ class MarioGym(gym.Env):
         mario_pos = [int(round(self.mario.rect.y/granularity)), int(round(self.mario.rect.x/granularity))]
 
         mario_representation = 128
-        ground_representaion = 64
-        enemy_representation = 255
-
+        ground_representation = 64
         array[mario_pos[0]][mario_pos[1]] = mario_representation
 
         closest_enemy = None
@@ -199,7 +326,7 @@ class MarioGym(gym.Env):
             #     else:
             #         array[int(round(entity.rect.y / granularity))][int(round(entity.rect.x / granularity))] = 4
         for ground in self.level.groundList:
-            array[int(round(32*ground[1] / granularity))][int(round(32*ground[0] / granularity))] = ground_representaion
+            array[int(round(32*ground[1] / granularity))][int(round(32*ground[0] / granularity))] = ground_representation
 
         array = np.hstack((np.zeros((level_size, padding)), array))
         array = np.vstack((np.zeros((padding, level_size+padding)), array))
@@ -251,6 +378,27 @@ class MarioGym(gym.Env):
         elif move == 'doNothing':
             self.mario.traits['goTrait'].direction = 0
 
+    def do_random_move(self, mario, move):
+        if move == 'moveLeft':
+            mario.traits['goTrait'].direction = -1
+        elif move == 'moveRight':
+            mario.traits['goTrait'].direction = 1
+        elif move == 'jump':
+            mario.traits['jumpTrait'].start()
+        elif move == 'jumpRight':
+            mario.traits['goTrait'].direction = 1
+            mario.traits['jumpTrait'].start()
+        elif move == 'jumpLeft':
+            mario.traits['goTrait'].direction = -1
+            mario.traits['jumpTrait'].start()
+        elif move == 'doNothing':
+            mario.traits['goTrait'].direction = 0
+
+
+def missing_elements(L):
+    start, end = L[0], L[-1]
+    return sorted(set(range(start, end + 1)).difference(L))
+
 if __name__ == "__main__":
     env = MarioGym(headless=False)
     plt.ion()
@@ -260,6 +408,3 @@ if __name__ == "__main__":
         else:
             env.do_game_step(np.random.choice(MOVES))
             env.observation = env.level_to_empathic_numpy()
-
-
-

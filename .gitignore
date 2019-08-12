@@ -1,0 +1,10 @@
+traits/*
+__pycache__/*
+.idea/*
+
+*.pyc
+*.deb
+experiments*
+figures*
+checkpoints*
+big_chart_pickles*

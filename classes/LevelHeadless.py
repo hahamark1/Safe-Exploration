@@ -6,7 +6,7 @@ from entities.Koopa import Koopa
 from entities.GoombaHeadless import GoombaHeadless
 from entities.RandomBox import RandomBox
 from classes.Tile import Tile
-from entities.Coin import Coin
+from entities.CoinHeadless import CoinHeadless
 import numpy as np
 from copy import copy
 
@@ -16,6 +16,7 @@ class LevelHeadless():
         self.level = None
         self.levelLength = 0
         self.points = 0
+        self.coins = 0
         self.clock = 0
         self.entityList = []
         self.groundList = []
@@ -30,17 +31,18 @@ class LevelHeadless():
             self.levelLength = data['length']
 
     def loadEntities(self, data):
-        for entity in data['level']['entities']:
-            for position in entity['positions']:
-                if entity['name'] == "Goomba":
-                    self.addGoomba(position[0], position[1])
-                elif entity['name'] == "Koopa":
-                    self.addKoopa(position[0], position[1])
-                elif entity['name'] == "coin":
-                    #self.addCoin(position[0], position[1])
-                    pass
-                elif entity['name'] == "randomBox":
-                    self.addRandomBox(position[0], position[1])
+        if 'entities' in data['level']:
+            for entity in data['level']['entities']:
+                for position in entity['positions']:
+                    if entity['name'] == "Goomba":
+                        self.addGoomba(position[0], position[1])
+                    elif entity['name'] == "Koopa":
+                        self.addKoopa(position[0], position[1])
+                    elif entity['name'] == "coin":
+                        self.addCoin(position[0], position[1])
+                        # pass
+                    elif entity['name'] == "randomBox":
+                        self.addRandomBox(position[0], position[1])
 
 
 
@@ -54,35 +56,33 @@ class LevelHeadless():
                 elif(obj['name'] == "coin"):
                     self.addCoin(position[0], position[1])
                 elif(obj['name'] == "ground"):
-                    self.groundList.append([position[0], position[1]])
+                    self.groundList.append([position[0], position[1]], )
 
 
     def loadLayers(self, data):
-        levelx = []
-        levely = []
+        levely = {}
         for layer in data['level']['layers']:
             for y in range(layer['ranges']['y'][0], layer['ranges']['y'][1]):
-                levelx = []
+                if y not in levely:
+                    levely[y] = {}
+
                 for x in range(layer['ranges']['x'][0],
                                layer['ranges']['x'][1]):
                     if(layer['spritename'] == 'sky'):
-                        levelx.append(
-                            Tile(
-                                None,
-                                None))
+                        levely[y][x]=Tile(None,
+                                None)
                     elif(layer['spritename'] == 'ground'):
-                        levelx.append(
-                            Tile(
-                                None, pygame.Rect(
-                                    x * 32, (y - 1) * 32, 32, 32)))
+                        levely[y][x]=Tile(None, pygame.Rect(
+                                    x * 32, (y - 1) * 32, 32, 32))
                         self.groundList.append([x,y])
                     else:
-                        levelx.append(
-                            Tile(
-                                None, pygame.Rect(
-                                    x * 32, (y - 1) * 32, 32, 32)))
-                levely.append(levelx)
-        self.level = levely
+                        levely[y][x]=Tile(None, pygame.Rect(
+                            x * 32, (y - 1) * 32, 32, 32))
+        # print(levely)
+        level_setup = [[levely[key2][key1] for key1 in sorted(levely[key2])] for key2 in sorted(levely)]
+
+        self.level = level_setup
+
 
 
     def updateEntities(self):
@@ -105,7 +105,7 @@ class LevelHeadless():
 
     def addCoin(self, x, y):
         self.entityList.append(
-            Coin(x, y)
+            CoinHeadless(x, y)
         )
 
     def addGoomba(self, x, y):

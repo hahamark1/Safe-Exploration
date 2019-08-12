@@ -1,32 +1,22 @@
 from MarioGym import MarioGym
 import matplotlib.pyplot as plt
+import random
+LEVEL_NAME = 'Level-basic-one-hole-three-coins.json'
 
 # Get the environment and extract the number of actions.
-env = MarioGym(headless=True)
+env = MarioGym(headless=False, level_name=LEVEL_NAME, no_coins=5, partial_observation=False)
 
 restart = False
 plt.ion()
 
+map_length = env.level.levelLength
 counter = 0
 while True:
+
     counter += 1
     if restart:
-        env.reset()
-    obs = env.level_to_supersimple_numpy()
-    nummy = env.level_to_numpy()
-    if nummy.shape != (0, 80) and counter % 5 == 0:
-        print(nummy.shape)
+        env.reset(levelname=LEVEL_NAME)
 
-        plt.matshow(nummy)
-        plt.pause(1)
-        plt.close()
-    print(obs)
-    if -90 < obs[0] < 0 and obs[2] > 0:
-        obs, reward, restart, info = env.step(4)
-    elif 0 < obs[0] < 90 and obs[2] < 0:
-        obs, reward, restart, info = env.step(3)
-    elif obs[5] < 0:
-        obs, reward, restart, info = env.step(1)
-    else:
-        obs, reward, restart, info = env.step(0)
+    obs, reward, restart, info = env.step(1)
 
+    counter += 0

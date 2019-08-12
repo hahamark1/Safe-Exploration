@@ -21,7 +21,7 @@ class EmphaticQLearner():
         self.learning_rate = 0.05
         self.future_discount = 0.99
         self.selfishness = 0.5
-        self.writer = tf.summary.FileWriter(f'logs/EQLearning3.0/{str(datetime.now())}/selfishness_{self.selfishness}')
+        self.writer = tf.summary.FileWriter(f'logs/LRLearning3.0/{str(datetime.now())}')
         self.step = 0
         self.log_q_values=[[]]
 
@@ -32,14 +32,7 @@ class EmphaticQLearner():
 
             self.Q_learning()
 
-            # with open('q_values.pickle', 'wb') as handle:
-            #     pickle.dump(self.Q_values, handle, protocol=pickle.HIGHEST_PROTOCOL)
-            #
-            # with open('coins_collected.pickle', 'wb') as handle:
-            #     pickle.dump(self.rewards, handle, protocol=pickle.HIGHEST_PROTOCOL)
-            #
-            # with open('goombas_killed.pickle', 'wb') as handle:
-            #     pickle.dump(self.enemies_killed, handle, protocol=pickle.HIGHEST_PROTOCOL)
+            EmpathicQLearner.py
 
 
     def log_scalar(self, tag, value, global_step):
