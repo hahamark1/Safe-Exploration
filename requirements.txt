@@ -1,5 +1,5 @@
 matplotlib==2.1.1
-numpy==1.13.3
+numpy==1.22.0
 gym==0.12.1
 keras==2.2.4
 pandas==0.24.2
